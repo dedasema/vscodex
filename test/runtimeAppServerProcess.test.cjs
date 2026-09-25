@@ -72,6 +72,7 @@ void (async () => {
     );
     assert.equal(spawned.length, 1);
     assert.equal(mcpChecks.length, 2);
+    const expectedCodexHome = join(storageDirectory, 'codex-home');
     assert.deepEqual(mcpChecks[0].args, ['mcp', 'list']);
     const expectedMcpDisable = `mcp_servers={${JSON.stringify(configuredMcpName)}={enabled=false,command="./.codexvs-disabled-mcp"}}`;
     assert.deepEqual(mcpChecks[1].args, [
@@ -80,6 +81,14 @@ void (async () => {
     assert.equal(mcpChecks.some((check) => check.args.includes('--json')), false);
     assert.equal(mcpChecks.every((check) => check.options.shell === false), true);
     assert.equal(mcpChecks.every((check) => check.options.env.OPENAI_API_KEY === undefined), true);
+    assert.equal(
+      mcpChecks.every((check) => check.options.env.CODEX_HOME === expectedCodexHome),
+      true
+    );
+    assert.equal(
+      mcpChecks.every((check) => check.options.env.CODEX_HOME !== 'shared-home'),
+      true
+    );
     assert.equal(spawned[0].command, 'codex.cmd');
     assert.deepEqual(
       spawned[0].args,
@@ -91,7 +100,15 @@ void (async () => {
     );
     assert.equal(spawned[0].args.includes('--analytics-default-enabled'), false);
     assert.equal(spawned[0].options.shell, false);
-    assert.equal(spawned[0].options.env.CODEX_HOME, 'shared-home');
+    assert.equal(
+      spawned[0].options.env.CODEX_HOME,
+      expectedCodexHome
+    );
+
+    assert.notEqual(
+      spawned[0].options.env.CODEX_HOME,
+      'shared-home'
+    );  
     assert.equal(spawned[0].options.env.OPENAI_API_KEY, undefined);
     assert.equal(spawned[0].options.env.CODEX_API_KEY, undefined);
     assert.equal(spawned[0].options.env.CODEX_ACCESS_TOKEN, undefined);

@@ -15,6 +15,7 @@ import {
   JsonRpcTransportError
 } from './jsonRpcStdioClient';
 import {
+  createCodexHomeEnvironment,
   createSanitizedAppServerEnvironment,
   defaultMcpIsolationStrategy,
   MCP_LIST_TIMEOUT_MS,
@@ -102,15 +103,15 @@ export interface AppServerExitEvent {
 
 export interface AppServerDiagnosticEvent {
   readonly kind:
-    | 'runtime-validated'
-    | 'mcp-isolation-verified'
-    | 'process-started'
-    | 'process-ready'
-    | 'process-exited'
-    | 'process-stopped'
-    | 'generation-changed'
-    | 'json-rpc'
-    | 'listener-failed';
+  | 'runtime-validated'
+  | 'mcp-isolation-verified'
+  | 'process-started'
+  | 'process-ready'
+  | 'process-exited'
+  | 'process-stopped'
+  | 'generation-changed'
+  | 'json-rpc'
+  | 'listener-failed';
   readonly generation?: number;
   readonly runtimeVersion?: string;
   readonly durationMs?: number;
@@ -325,9 +326,17 @@ export class AppServerProcess implements Disposable {
       ? this.options.command()
       : this.options.command;
     let passiveDirectory: string;
+    let passiveCodexHome: string;
+
     try {
       await mkdir(this.options.storageDirectory, { recursive: true });
-      passiveDirectory = await mkdtemp(join(this.options.storageDirectory, 'app-server-passive-'));
+
+      passiveCodexHome = join(this.options.storageDirectory, 'codex-home');
+      await mkdir(passiveCodexHome, { recursive: true });
+
+      passiveDirectory = await mkdtemp(
+        join(this.options.storageDirectory, 'app-server-passive-')
+      );
     } catch (error) {
       this.stateValue = this.disposed ? 'stopped' : 'idle';
       throw new JsonRpcTransportError('The passive app-server directory could not be created.', {
@@ -335,12 +344,17 @@ export class AppServerProcess implements Disposable {
       });
     }
 
+    const passiveEnvironment = createCodexHomeEnvironment(
+      passiveCodexHome,
+      this.options.env
+    );
+
     const runtimeStartedAt = Date.now();
     let runtimeInfo: CodexRuntimeInfo;
     try {
       runtimeInfo = await this.runtimeValidator(command, {
         timeoutMs: this.startupTimeoutMs,
-        env: this.options.env,
+        env: passiveEnvironment,
         cwd: passiveDirectory,
         spawn: this.options.spawn
       });
@@ -359,9 +373,11 @@ export class AppServerProcess implements Disposable {
     let mcpDisableArguments: readonly string[];
     let passiveMcpServers: Readonly<Record<string, PassiveMcpServerConfig>>;
     try {
-      const isolation = await (this.options.mcpIsolationStrategy ?? defaultMcpIsolationStrategy).prepare(runtimeInfo.command, {
+      const isolation = await (
+        this.options.mcpIsolationStrategy ?? defaultMcpIsolationStrategy
+      ).prepare(runtimeInfo.command, {
         timeoutMs: this.mcpIsolationTimeoutMs,
-        env: this.options.env,
+        env: passiveEnvironment,
         cwd: passiveDirectory,
         spawn: this.options.spawn
       });
@@ -382,7 +398,7 @@ export class AppServerProcess implements Disposable {
     try {
       child = spawn(runtimeInfo.command, buildAppServerArguments(mcpDisableArguments), {
         cwd: passiveDirectory,
-        env: createSanitizedAppServerEnvironment(this.options.env),
+        env: createSanitizedAppServerEnvironment(passiveEnvironment),
         windowsHide: true,
         shell: false
       });

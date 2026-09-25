@@ -181,6 +181,24 @@ export function assertSupportedCodexCliVersion(output: string): string {
   return version;
 }
 
+export function createCodexHomeEnvironment(
+  codexHome: string,
+  source: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = {};
+
+  // Windows trata las variables de entorno sin distinguir mayúsculas,
+  // por lo que eliminamos cualquier variante existente de CODEX_HOME.
+  for (const [key, value] of Object.entries(source)) {
+    if (key.toUpperCase() !== 'CODEX_HOME') {
+      environment[key] = value;
+    }
+  }
+
+  environment.CODEX_HOME = codexHome;
+  return environment;
+}
+
 export function createSanitizedAppServerEnvironment(
   source: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
