@@ -25,7 +25,8 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - Stage only explicit task files.
 - TDD mode: off; no repository or session configuration enables it. Use focused syntax and live integration checks instead.
 - Delivery strategy: `ask-on-risk`.
-- Forecast: approximately 80 authored changed lines, excluding generated artifacts.
+- Forecast: approximately 260 authored changed lines, excluding generated artifacts.
+- Running authored change count: 171 lines through PDT-2.
 
 ## Tasks
 
@@ -35,13 +36,20 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
   - Verification: syntax passed; live probe completed with `RESULT: FAIL` and no `item/tool/call`.
   - Commit: `0c1f2cc` (`test(app-server): reproduce passive dynamic tool failure`).
   - Native review: approved and acknowledged under lineage `review-fc6069d4f34b342a`.
-- [ ] **PDT-2 — Isolate the next production difference**
-  - Route: pending PDT-1 evidence; delegate if the next step requires multi-file understanding or writes.
-  - If passive argv passes, compare the production thread config and request envelope in the smallest coherent increment.
-  - If passive argv fails, design a diagnostic-only argument bisect that does not become a capability workaround.
+- [x] **PDT-2 — Isolate the next production difference**
+  - Route: delegated bounded writer after the long-session trigger.
+  - Added a validated diagnostic-only `--omit-disable=<feature>` probe option while preserving the default production argv.
+  - Verification: omitting only `--disable code_mode_host` changed the probe from FAIL to PASS and emitted `item/tool/call`.
+  - Commit: `96a8b1e` (`test(app-server): isolate code mode host flag`).
+  - Native review: approved and acknowledged under lineage `review-92ebf0bbd70b5f5f`.
+- [ ] **PDT-3 — Validate the safe code-mode host boundary**
+  - Route: delegate bounded preparation and implementation.
+  - Reproduce the production thread config while omitting only the process-level `--disable code_mode_host` flag.
+  - Prove whether `features.code_mode_host: false` preserves dynamic tool calls without exposing Codex-owned code-mode capabilities.
   - Record focused verification and commit identity.
-- [ ] **PDT-3 — Normalize temporary diagnostics**
-  - Route: delegated writer if two or more non-trivial files are required.
+- [ ] **PDT-4 — Normalize temporary diagnostics**
+  - Route: delegated writer because production normalization will touch multiple non-trivial files.
+  - Apply the smallest architecture-compliant production fix supported by PDT-3 evidence.
   - Remove the `create_file`-only filter and raw-alias exception after the cause is established.
   - Keep only diagnostics or probes that provide durable development value.
   - Run the applicable project checks and record the final commit identity.
@@ -63,8 +71,10 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - `node scripts/probe-dynamic-tool.mjs`: completed with `RESULT: FAIL`; app-server emitted no `item/tool/call`. Stderr also reported an MCP HTTP 404 and disabled code-mode host, without an authentication failure. Causality remains unproven.
 - PDT-1 independent verification passed code and argument-parity checks; it was initially partial only because task bookkeeping had not yet recorded completion.
 - PDT-1 commit `0c1f2cc` was approved and acknowledged by native review lineage `review-fc6069d4f34b342a`.
-- Current reviewed boundary: `0c1f2cc`.
+- PDT-2 independently reproduced a dynamic tool call only when `--disable code_mode_host` was omitted; the default full passive argv remains unchanged.
+- PDT-2 commit `96a8b1e` was approved and acknowledged by native review lineage `review-92ebf0bbd70b5f5f`.
+- Current reviewed boundary: `96a8b1e`.
 
 ## Next Step
 
-Design a diagnostic-only process-argument bisect that preserves the passive-provider invariant, then identify the first PASS → FAIL argument boundary.
+Reproduce the production `thread/start` passive config with process-level `code_mode_host` omission to determine whether the per-thread false setting is a safe boundary.
