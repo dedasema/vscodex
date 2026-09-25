@@ -193,8 +193,8 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
       const currentInput = currentMessage ? convertMessageToUserInput(currentMessage) : [];
       const toolResults = currentMessage
         ? currentMessage.content
-            .filter((part): part is vscode.LanguageModelToolResultPart => part instanceof vscode.LanguageModelToolResultPart)
-            .map((part) => ({ callId: part.callId, content: part.content }))
+          .filter((part): part is vscode.LanguageModelToolResultPart => part instanceof vscode.LanguageModelToolResultPart)
+          .map((part) => ({ callId: part.callId, content: part.content }))
         : [];
       let usageReported = false;
 
@@ -325,6 +325,9 @@ function summarizeRequestShape(
     toolResultParts,
     otherParts,
     toolDefinitions: options.tools?.length ?? 0,
+    toolNames: JSON.stringify(
+      options.tools?.map((tool) => tool.name).sort() ?? []
+    ),
     toolMode: options.toolMode === vscode.LanguageModelChatToolMode.Required ? 'required' : 'auto'
   };
 }

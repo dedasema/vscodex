@@ -11,3 +11,5 @@ logs/
 /VSCODEX_HARNESS_TOOL_AUDIT.md
 /docs/CLIENT-EXPANSION-PLAN.md
 /editthis.md
+.atl/*
+.gitignore
