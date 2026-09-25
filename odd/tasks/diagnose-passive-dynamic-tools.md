@@ -29,12 +29,12 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 
 ## Tasks
 
-- [ ] **PDT-1 — Establish passive-argv probe parity**
+- [x] **PDT-1 — Establish passive-argv probe parity**
   - Route: inline direct after delegated read-only mapping; one mechanical script surface.
-  - Fix the dynamic-tool name mismatch.
-  - Launch the probe with the exact static production `APP_SERVER_ARGUMENTS`.
-  - Run `node --check scripts/probe-dynamic-tool.mjs` and `node scripts/probe-dynamic-tool.mjs`.
-  - Record the observed result and commit identity.
+  - Fixed the dynamic-tool name mismatch and launched with the exact static production `APP_SERVER_ARGUMENTS`.
+  - Verification: syntax passed; live probe completed with `RESULT: FAIL` and no `item/tool/call`.
+  - Commit: `0c1f2cc` (`test(app-server): reproduce passive dynamic tool failure`).
+  - Native review: approved and acknowledged under lineage `review-fc6069d4f34b342a`.
 - [ ] **PDT-2 — Isolate the next production difference**
   - Route: pending PDT-1 evidence; delegate if the next step requires multi-file understanding or writes.
   - If passive argv passes, compare the production thread config and request envelope in the smallest coherent increment.
@@ -61,8 +61,10 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - PDT-1 implementation now shares one dynamic-tool name between declaration and prompt and matches the static production `APP_SERVER_ARGUMENTS` exactly.
 - `node --check scripts/probe-dynamic-tool.mjs`: passed in delegated verification and in the parent spot check.
 - `node scripts/probe-dynamic-tool.mjs`: completed with `RESULT: FAIL`; app-server emitted no `item/tool/call`. Stderr also reported an MCP HTTP 404 and disabled code-mode host, without an authentication failure. Causality remains unproven.
-- Current reviewed boundary: `b85af7052ee5b829835c8c7a325ba3396612bedc`.
+- PDT-1 independent verification passed code and argument-parity checks; it was initially partial only because task bookkeeping had not yet recorded completion.
+- PDT-1 commit `0c1f2cc` was approved and acknowledged by native review lineage `review-fc6069d4f34b342a`.
+- Current reviewed boundary: `0c1f2cc`.
 
 ## Next Step
 
-Commit and review PDT-1, then design a diagnostic-only process-argument bisect that preserves the passive-provider invariant.
+Design a diagnostic-only process-argument bisect that preserves the passive-provider invariant, then identify the first PASS → FAIL argument boundary.
