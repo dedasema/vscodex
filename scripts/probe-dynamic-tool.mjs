@@ -34,6 +34,68 @@ const APP_SERVER_ARGUMENTS = Object.freeze([
     '--stdio'
 ]);
 
+function parseOmittedDisabledFeature(argv) {
+    let omittedFeature;
+
+    for (const argument of argv) {
+        if (!argument.startsWith('--omit-disable=')) {
+            throw new Error(
+                `Unsupported argument: ${argument}. ` +
+                    'Only --omit-disable=<feature> is supported.'
+            );
+        }
+
+        if (omittedFeature !== undefined) {
+            throw new Error('--omit-disable may appear at most once.');
+        }
+
+        omittedFeature = argument.slice('--omit-disable='.length);
+
+        if (!omittedFeature) {
+            throw new Error('--omit-disable requires a non-empty feature.');
+        }
+
+        const hasDisabledFeature = APP_SERVER_ARGUMENTS.some(
+            (value, index) =>
+                value === '--disable' &&
+                APP_SERVER_ARGUMENTS[index + 1] === omittedFeature
+        );
+
+        if (!hasDisabledFeature) {
+            throw new Error(
+                `--omit-disable feature is not disabled by default: ` +
+                    omittedFeature
+            );
+        }
+    }
+
+    return omittedFeature;
+}
+
+function createDiagnosticArguments(omittedFeature) {
+    if (omittedFeature === undefined) {
+        return APP_SERVER_ARGUMENTS;
+    }
+
+    const disableIndex = APP_SERVER_ARGUMENTS.findIndex(
+        (value, index) =>
+            value === '--disable' &&
+            APP_SERVER_ARGUMENTS[index + 1] === omittedFeature
+    );
+
+    return [
+        ...APP_SERVER_ARGUMENTS.slice(0, disableIndex),
+        ...APP_SERVER_ARGUMENTS.slice(disableIndex + 2)
+    ];
+}
+
+const omittedFeature = parseOmittedDisabledFeature(process.argv.slice(2));
+const appServerArguments = createDiagnosticArguments(omittedFeature);
+
+if (omittedFeature !== undefined) {
+    console.log(`Diagnostic argv: omitted --disable ${omittedFeature}.`);
+}
+
 const PASSIVE_PROVIDER_INSTRUCTIONS = `
 You are the reasoning backend for a VS Code LanguageModelChatProvider.
 VS Code and its calling agent own context selection, workspace permissions,
@@ -47,7 +109,7 @@ use a supplied dynamic VS Code agent or subagent tool. Return normal assistant
 text and dynamic tool calls.
 `.trim();
 
-const child = spawn(command, APP_SERVER_ARGUMENTS, {
+const child = spawn(command, appServerArguments, {
     env: process.env,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
