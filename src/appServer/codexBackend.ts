@@ -361,17 +361,7 @@ export class CodexAppServerBackend implements CodexBackend {
       throw vscode.LanguageModelError.NoPermissions('Sign in with ChatGPT to use Codex.');
     }
 
-    const diagnosticTools = request.tools.filter(
-      (tool) => tool.name === 'create_file'
-    );
-
-    const catalog = createDynamicToolCatalog(diagnosticTools); const createFileTool = catalog.byOriginalName.get('create_file');
-
-    this.outputChannel.info('dynamic tool catalog', {
-      toolCount: catalog.tools.length,
-      createFileAvailable: createFileTool ? 'yes' : 'no',
-      createFileAlias: createFileTool?.alias ?? 'missing'
-    });
+    const catalog = createDynamicToolCatalog(request.tools);
     const envelope = this.createEnvelope(request, catalog);
 
     if (request.toolResults.length === 1) {
@@ -458,13 +448,6 @@ export class CodexAppServerBackend implements CodexBackend {
         reason: 'historyDiverged'
       };
     }
-
-    this.outputChannel.info('conversation reuse plan', {
-      kind: plan.kind,
-      reason: plan.kind === 'cold' ? plan.reason : 'n/a',
-      toolCount: catalog.tools.length,
-      createFileAvailable: catalog.byOriginalName.has('create_file') ? 'yes' : 'no'
-    });
 
     const reservedBranchId = plan.kind === 'continue' ? plan.branch.id : undefined;
     if (reservedBranchId) {
@@ -608,11 +591,6 @@ export class CodexAppServerBackend implements CodexBackend {
 
   private async startThread(request: BackendChatRequest, catalog: DynamicToolCatalog): Promise<string> {
     const passiveDirectory = this.requirePassiveDirectory();
-    const createFileTool = catalog.byOriginalName.get('create_file');
-    this.outputChannel.info('thread/start dynamic tools', {
-      dynamicToolCount: catalog.dynamicTools.length,
-      createFileAlias: createFileTool?.alias ?? 'missing'
-    });
     const response = await this.process.request<ThreadResponse>('thread/start', {
       model: request.model,
       modelProvider: 'openai',
@@ -953,19 +931,6 @@ export class CodexAppServerBackend implements CodexBackend {
   }
 
   private async handleServerRequest(request: JsonRpcServerRequestContext): Promise<void> {
-    if (request.method === 'item/tool/call') {
-      const params = request.params as {
-        tool?: unknown;
-        namespace?: unknown;
-      };
-
-      this.outputChannel.info('app-server dynamic tool call', {
-        tool: typeof params.tool === 'string' ? params.tool : 'unknown',
-        namespace: params.namespace === null
-          ? 'null'
-          : typeof params.namespace
-      });
-    }
     try {
       await this.turnCoordinator.handleServerRequest({
         id: request.id,

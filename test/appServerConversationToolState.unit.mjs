@@ -220,9 +220,22 @@ async function testToolHandoff({
     interruptTurn: (threadId, turnId, reason) => interrupts.push({ threadId, turnId, reason })
   });
   const catalog = createDynamicToolCatalog([
+    { name: 'create_file', description: 'Create a file', inputSchema: schema },
     { name: 'read_file', description: 'Read a file', inputSchema: schema },
     { name: 'list_dir', description: 'List a directory', inputSchema: schema }
   ]);
+  const createFile = catalog.byOriginalName.get('create_file');
+  equal(
+    createFile.alias.startsWith('vscode_'),
+    true,
+    'create_file receives a VS Code alias rather than its raw name'
+  );
+  equal(
+    createFile.alias,
+    createDynamicToolCatalog([{ name: 'create_file', description: 'Create a file', inputSchema: schema }])
+      .byOriginalName.get('create_file').alias,
+    'create_file alias is deterministic'
+  );
   equal(
     catalog.tools.every((tool) => tool.description.includes('VS Code executes this tool')),
     true,

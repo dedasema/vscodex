@@ -90,6 +90,12 @@ void (async () => {
       true
     );
     assert.equal(spawned[0].command, 'codex.cmd');
+    assert.equal(
+      processModule.APP_SERVER_ARGUMENTS.some((value, index, arguments_) =>
+        value === '--disable' && arguments_[index + 1] === 'code_mode_host'),
+      false,
+      'process argv must not disable code_mode_host'
+    );
     assert.deepEqual(
       spawned[0].args,
       processModule.buildAppServerArguments(['-c', expectedMcpDisable])

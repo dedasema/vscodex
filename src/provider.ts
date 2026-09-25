@@ -325,9 +325,6 @@ function summarizeRequestShape(
     toolResultParts,
     otherParts,
     toolDefinitions: options.tools?.length ?? 0,
-    toolNames: JSON.stringify(
-      options.tools?.map((tool) => tool.name).sort() ?? []
-    ),
     toolMode: options.toolMode === vscode.LanguageModelChatToolMode.Required ? 'required' : 'auto'
   };
 }

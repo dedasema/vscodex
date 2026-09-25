@@ -25,8 +25,11 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - Stage only explicit task files.
 - TDD mode: off; no repository or session configuration enables it. Use focused syntax and live integration checks instead.
 - Delivery strategy: `ask-on-risk`.
-- Forecast: approximately 260 authored changed lines, excluding generated artifacts.
-- Running authored change count: 171 lines through PDT-2.
+- Chain strategy: `stacked-to-main` (selected by the user after the forecast exceeded the review budget).
+- Forecast: approximately 460 authored changed lines, excluding generated artifacts.
+- Running authored change count: 255 lines through PDT-3; PDT-4 adds 205 scoped lines before commit.
+- Planned PR slice 1 — diagnostic probe: commits `0c1f2cc`, `96a8b1e`, and `9956180`, plus their ODD bookkeeping commits.
+- Planned PR slice 2 — production normalization: PDT-4 implementation and tests, independently reviewable against `main`.
 
 ## Tasks
 
@@ -42,11 +45,12 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
   - Verification: omitting only `--disable code_mode_host` changed the probe from FAIL to PASS and emitted `item/tool/call`.
   - Commit: `96a8b1e` (`test(app-server): isolate code mode host flag`).
   - Native review: approved and acknowledged under lineage `review-92ebf0bbd70b5f5f`.
-- [ ] **PDT-3 — Validate the safe code-mode host boundary**
-  - Route: delegate bounded preparation and implementation.
-  - Reproduce the production thread config while omitting only the process-level `--disable code_mode_host` flag.
-  - Prove whether `features.code_mode_host: false` preserves dynamic tool calls without exposing Codex-owned code-mode capabilities.
-  - Record focused verification and commit identity.
+- [x] **PDT-3 — Validate the safe code-mode host boundary**
+  - Route: delegated bounded preparation and implementation.
+  - Reproduced the static production thread config while omitting only the process-level `--disable code_mode_host` flag.
+  - Verification: `features.code_mode_host: false` remained active and the probe emitted `item/tool/call`; the process-level flag, not the per-thread false setting, suppresses client dynamic tools.
+  - Commit: `9956180` (`test(app-server): validate passive thread config`).
+  - Native review: approved and acknowledged under lineage `review-a1a2e960c6ae3df8`.
 - [ ] **PDT-4 — Normalize temporary diagnostics**
   - Route: delegated writer because production normalization will touch multiple non-trivial files.
   - Apply the smallest architecture-compliant production fix supported by PDT-3 evidence.
@@ -73,8 +77,16 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - PDT-1 commit `0c1f2cc` was approved and acknowledged by native review lineage `review-fc6069d4f34b342a`.
 - PDT-2 independently reproduced a dynamic tool call only when `--disable code_mode_host` was omitted; the default full passive argv remains unchanged.
 - PDT-2 commit `96a8b1e` was approved and acknowledged by native review lineage `review-92ebf0bbd70b5f5f`.
-- Current reviewed boundary: `96a8b1e`.
+- PDT-3 preserved `features.code_mode_host: false` and the remaining passive thread config while successfully emitting the client dynamic tool call.
+- PDT-3 verification is partial only for full production parity: the standalone probe intentionally retains its cwd and does not reproduce provider/model fields or runtime-discovered MCP overrides.
+- PDT-3 commit `9956180` was approved and acknowledged by native review lineage `review-a1a2e960c6ae3df8`.
+- The user selected `stacked-to-main` for the two planned PR slices after the forecast rose above 400 authored changed lines.
+- PDT-4 removed only the process-level `code_mode_host` disable, retained per-thread `features.code_mode_host: false`, restored the full caller tool catalog and deterministic aliases, removed temporary tool-name diagnostics, and added focused boundary coverage.
+- PDT-4 verification passed: `npm run check`, `npm run test:unit` (10/10), `npm run test:smoke`, probe syntax, and the live production-thread-config probe (`RESULT: PASS`).
+- The live probe still emitted a non-fatal MCP HTTP 404 because the standalone script inherits cwd/environment and does not prove production MCP isolation; this caveat predates PDT-4 and production isolation remains separately tested.
+- Native ambient review approved and acknowledged target `sha256:fe1dd175f017bae05a3466cca0c5625edf98b030eddeb45ee4277e15645fcc40` under lineage `review-c060212be81e9569`; that ambient target also contained the preserved unrelated `.gitignore` residue, so the exact intended work-unit commit will be assessed separately.
+- Current reviewed boundary: `9956180`.
 
 ## Next Step
 
-Reproduce the production `thread/start` passive config with process-level `code_mode_host` omission to determine whether the per-thread false setting is a safe boundary.
+Commit the exact PDT-4 files without `.gitignore`, assess/review that committed work unit, push it, then record the commit identity and close the task.

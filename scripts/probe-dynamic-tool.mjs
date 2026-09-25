@@ -18,7 +18,6 @@ const APP_SERVER_ARGUMENTS = Object.freeze([
     '--disable', 'computer_use',
     '--disable', 'image_generation',
     '--disable', 'in_app_browser',
-    '--disable', 'code_mode_host',
     '--disable', 'multi_agent',
     '--disable', 'multi_agent_v2',
     '--disable', 'plugins',
@@ -35,81 +34,28 @@ const APP_SERVER_ARGUMENTS = Object.freeze([
 ]);
 
 function parseDiagnosticOptions(argv) {
-    let omittedFeature;
     let productionThreadConfig = false;
 
     for (const argument of argv) {
-        if (argument === '--production-thread-config') {
-            if (productionThreadConfig) {
-                throw new Error(
-                    '--production-thread-config may appear at most once.'
-                );
-            }
-
-            productionThreadConfig = true;
-            continue;
-        }
-
-        if (!argument.startsWith('--omit-disable=')) {
+        if (argument !== '--production-thread-config') {
             throw new Error(
                 `Unsupported argument: ${argument}. ` +
-                    'Only --omit-disable=<feature> and ' +
-                    '--production-thread-config are supported.'
+                    'Only --production-thread-config is supported.'
             );
         }
-
-        if (omittedFeature !== undefined) {
-            throw new Error('--omit-disable may appear at most once.');
-        }
-
-        omittedFeature = argument.slice('--omit-disable='.length);
-
-        if (!omittedFeature) {
-            throw new Error('--omit-disable requires a non-empty feature.');
-        }
-
-        const hasDisabledFeature = APP_SERVER_ARGUMENTS.some(
-            (value, index) =>
-                value === '--disable' &&
-                APP_SERVER_ARGUMENTS[index + 1] === omittedFeature
-        );
-
-        if (!hasDisabledFeature) {
+        if (productionThreadConfig) {
             throw new Error(
-                `--omit-disable feature is not disabled by default: ` +
-                    omittedFeature
+                '--production-thread-config may appear at most once.'
             );
         }
+        productionThreadConfig = true;
     }
 
-    return { omittedFeature, productionThreadConfig };
+    return { productionThreadConfig };
 }
 
-function createDiagnosticArguments(omittedFeature) {
-    if (omittedFeature === undefined) {
-        return APP_SERVER_ARGUMENTS;
-    }
-
-    const disableIndex = APP_SERVER_ARGUMENTS.findIndex(
-        (value, index) =>
-            value === '--disable' &&
-            APP_SERVER_ARGUMENTS[index + 1] === omittedFeature
-    );
-
-    return [
-        ...APP_SERVER_ARGUMENTS.slice(0, disableIndex),
-        ...APP_SERVER_ARGUMENTS.slice(disableIndex + 2)
-    ];
-}
-
-const { omittedFeature, productionThreadConfig } = parseDiagnosticOptions(
-    process.argv.slice(2)
-);
-const appServerArguments = createDiagnosticArguments(omittedFeature);
-
-if (omittedFeature !== undefined) {
-    console.log(`Diagnostic argv: omitted --disable ${omittedFeature}.`);
-}
+const { productionThreadConfig } = parseDiagnosticOptions(process.argv.slice(2));
+const appServerArguments = APP_SERVER_ARGUMENTS;
 
 if (productionThreadConfig) {
     console.log('Diagnostic thread: production thread config active.');
