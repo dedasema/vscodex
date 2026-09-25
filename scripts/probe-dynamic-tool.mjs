@@ -2,6 +2,37 @@ import { spawn } from 'node:child_process';
 import readline from 'node:readline';
 
 const command = process.platform === 'win32' ? 'codex.cmd' : 'codex';
+const DYNAMIC_TOOL_NAME = 'vscode_codexvs_probe_tool';
+
+const APP_SERVER_ARGUMENTS = Object.freeze([
+    '-c', 'web_search="disabled"',
+    '-c', 'mcp_servers={}',
+    '-c', 'skills.config=[]',
+    '-c', 'project_doc_max_bytes=0',
+    '--disable', 'shell_tool',
+    '--disable', 'unified_exec',
+    '--disable', 'shell_snapshot',
+    '--disable', 'apps',
+    '--disable', 'browser_use',
+    '--disable', 'browser_use_external',
+    '--disable', 'computer_use',
+    '--disable', 'image_generation',
+    '--disable', 'in_app_browser',
+    '--disable', 'code_mode_host',
+    '--disable', 'multi_agent',
+    '--disable', 'multi_agent_v2',
+    '--disable', 'plugins',
+    '--disable', 'plugin_sharing',
+    '--disable', 'remote_plugin',
+    '--disable', 'hooks',
+    '--disable', 'goals',
+    '--disable', 'memories',
+    '--disable', 'workspace_dependencies',
+    '--disable', 'skill_mcp_dependency_install',
+    '--disable', 'tool_suggest',
+    'app-server',
+    '--stdio'
+]);
 
 const PASSIVE_PROVIDER_INSTRUCTIONS = `
 You are the reasoning backend for a VS Code LanguageModelChatProvider.
@@ -16,7 +47,7 @@ use a supplied dynamic VS Code agent or subagent tool. Return normal assistant
 text and dynamic tool calls.
 `.trim();
 
-const child = spawn(command, ['app-server'], {
+const child = spawn(command, APP_SERVER_ARGUMENTS, {
     env: process.env,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
@@ -214,7 +245,7 @@ async function main() {
 
             dynamicTools: [
                 {
-                    name: 'vscode_codexvs_probe_tool',
+                    name: DYNAMIC_TOOL_NAME,
                     description:
                         'Diagnostic client-owned VS Code dynamic tool. ' +
                         'When asked to run the CodexVS dynamic-tool probe, ' +
@@ -257,10 +288,10 @@ async function main() {
 
                     text:
                         'Run the CodexVS dynamic-tool probe now. ' +
-                        'You MUST call codexvs_probe_tool exactly once ' +
+                        `You MUST call ${DYNAMIC_TOOL_NAME} exactly once ` +
                         'with value "ping". ' +
                         'Do not use any other tool. ' +
-                        'Do not answer before calling codexvs_probe_tool.'
+                        `Do not answer before calling ${DYNAMIC_TOOL_NAME}.`
                 }
             ]
         });
