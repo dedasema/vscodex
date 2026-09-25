@@ -34,14 +34,27 @@ const APP_SERVER_ARGUMENTS = Object.freeze([
     '--stdio'
 ]);
 
-function parseOmittedDisabledFeature(argv) {
+function parseDiagnosticOptions(argv) {
     let omittedFeature;
+    let productionThreadConfig = false;
 
     for (const argument of argv) {
+        if (argument === '--production-thread-config') {
+            if (productionThreadConfig) {
+                throw new Error(
+                    '--production-thread-config may appear at most once.'
+                );
+            }
+
+            productionThreadConfig = true;
+            continue;
+        }
+
         if (!argument.startsWith('--omit-disable=')) {
             throw new Error(
                 `Unsupported argument: ${argument}. ` +
-                    'Only --omit-disable=<feature> is supported.'
+                    'Only --omit-disable=<feature> and ' +
+                    '--production-thread-config are supported.'
             );
         }
 
@@ -69,7 +82,7 @@ function parseOmittedDisabledFeature(argv) {
         }
     }
 
-    return omittedFeature;
+    return { omittedFeature, productionThreadConfig };
 }
 
 function createDiagnosticArguments(omittedFeature) {
@@ -89,11 +102,17 @@ function createDiagnosticArguments(omittedFeature) {
     ];
 }
 
-const omittedFeature = parseOmittedDisabledFeature(process.argv.slice(2));
+const { omittedFeature, productionThreadConfig } = parseDiagnosticOptions(
+    process.argv.slice(2)
+);
 const appServerArguments = createDiagnosticArguments(omittedFeature);
 
 if (omittedFeature !== undefined) {
     console.log(`Diagnostic argv: omitted --disable ${omittedFeature}.`);
+}
+
+if (productionThreadConfig) {
+    console.log('Diagnostic thread: production thread config active.');
 }
 
 const PASSIVE_PROVIDER_INSTRUCTIONS = `
@@ -108,6 +127,51 @@ filesystem, MCP, web, or collaboration/spawn_agent tools. For subagent work,
 use a supplied dynamic VS Code agent or subagent tool. Return normal assistant
 text and dynamic tool calls.
 `.trim();
+
+const PASSIVE_MULTI_AGENT_MODE_HINT =
+    'Codex built-in collaboration is prohibited in this passive provider. ' +
+    'Do not call spawn_agent or any Codex collaboration tool. VS Code alone ' +
+    'owns subagent orchestration through caller-supplied dynamic tools.';
+
+const PASSIVE_APP_SERVER_CONFIG = {
+    web_search: 'disabled',
+    mcp_servers: {},
+    skills: { config: [] },
+    project_doc_max_bytes: 0,
+    include_environment_context: false,
+    include_permissions_instructions: false,
+    include_collaboration_mode_instructions: false,
+    features: {
+        shell_tool: false,
+        unified_exec: false,
+        shell_snapshot: false,
+        apps: false,
+        browser_use: false,
+        browser_use_external: false,
+        computer_use: false,
+        image_generation: false,
+        in_app_browser: false,
+        code_mode_host: false,
+        multi_agent: false,
+        multi_agent_v2: {
+            enabled: false,
+            max_concurrent_threads_per_session: 1,
+            usage_hint_text: '',
+            root_agent_usage_hint_text: '',
+            subagent_usage_hint_text: '',
+            multi_agent_mode_hint_text: PASSIVE_MULTI_AGENT_MODE_HINT
+        },
+        plugins: false,
+        plugin_sharing: false,
+        remote_plugin: false,
+        hooks: false,
+        goals: false,
+        memories: false,
+        workspace_dependencies: false,
+        skill_mcp_dependency_install: false,
+        tool_suggest: false
+    }
+};
 
 const child = spawn(command, appServerArguments, {
     env: process.env,
@@ -299,11 +363,23 @@ async function main() {
 
         console.log('Initialized.');
 
+        const productionThreadStartFields = productionThreadConfig
+            ? {
+                runtimeWorkspaceRoots: [],
+                environments: [],
+                selectedCapabilityRoots: [],
+                personality: 'none',
+                baseInstructions: PASSIVE_PROVIDER_INSTRUCTIONS,
+                config: PASSIVE_APP_SERVER_CONFIG
+            }
+            : {};
+
         const threadResult = await request('thread/start', {
             cwd: process.cwd(),
             approvalPolicy: 'never',
             sandbox: 'read-only',
             ephemeral: true,
+            ...productionThreadStartFields,
 
             dynamicTools: [
                 {
