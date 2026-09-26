@@ -1,5 +1,9 @@
 import { spawn } from 'node:child_process';
 import readline from 'node:readline';
+import {
+    reportDynamicToolProbeResult,
+    sanitizeProbeChildEnvironment
+} from './probeDynamicToolSupport.mjs';
 
 const command = process.platform === 'win32' ? 'codex.cmd' : 'codex';
 const DYNAMIC_TOOL_NAME = 'vscode_codexvs_probe_tool';
@@ -120,7 +124,7 @@ const PASSIVE_APP_SERVER_CONFIG = {
 };
 
 const child = spawn(command, appServerArguments, {
-    env: process.env,
+    env: sanitizeProbeChildEnvironment(process.env),
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
     windowsHide: true
@@ -292,7 +296,6 @@ async function main() {
 
     try {
         console.log('Starting app-server...');
-        console.log('CODEX_HOME:', process.env.CODEX_HOME ?? '(default)');
 
         await request('initialize', {
             clientInfo: {
@@ -382,19 +385,7 @@ async function main() {
 
         await turnCompleted;
 
-        console.log('\n=============================');
-
-        if (sawDynamicToolCall) {
-            console.log('RESULT: PASS');
-            console.log('app-server emitted item/tool/call.');
-        } else {
-            console.log('RESULT: FAIL');
-            console.log(
-                'app-server completed the turn without item/tool/call.'
-            );
-        }
-
-        console.log('=============================\n');
+        reportDynamicToolProbeResult(sawDynamicToolCall);
     } catch (error) {
         console.error('\nPROBE ERROR');
         console.error(error);
