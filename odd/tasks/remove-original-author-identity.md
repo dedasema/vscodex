@@ -8,13 +8,14 @@ Remove the original author's non-mandatory identity from the fork's current sour
 
 - Cleanup target: the original author identity only; preserve the user's current author and committer identity.
 - Repository topology: keep `dedasema/vscodex` as a GitHub fork, accepting that GitHub will continue to display its upstream parent.
-- Extension identity: rebrand from `merceralex397-collab.codexvs` to `dedasema.codexvs`.
+- PR disposition for a history rewrite: close fork PR #1 and open a new PR afterward. Closing does not erase old PR metadata, reviews, or old commit links.
+- Extension identity: rebrand from the original Marketplace extension ID to `dedasema.codexvs`.
 - Marketplace readiness: prepare the code now even though the public `dedasema` Marketplace publisher does not yet exist.
 - Replacement identity for rewritten original Git metadata: `CodexVS Contributor <noreply@users.noreply.github.com>`.
 
 ## Constraints
 
-- Preserve `LICENSE` verbatim, including `Copyright (c) 2026 merceralex397-collab`, because the MIT license requires the copyright and permission notices to remain.
+- Preserve `LICENSE` verbatim, including its original copyright notice on line 3, because the MIT license requires the copyright and permission notices to remain.
 - Preserve `THIRD_PARTY_NOTICES.md` and generated dependency attribution verbatim.
 - Preserve the user's existing Git author and committer identity.
 - Preserve the unrelated unstaged `.gitignore` residue without staging, resetting, checking out, or overwriting it.
@@ -54,6 +55,8 @@ Remove the original author's non-mandatory identity from the fork's current sour
 - The original identity occurs in current package metadata, project links, CODEOWNERS, release documentation, security acceptance, README copyright text, and the mandatory MIT license notice.
 - The fork has no releases, remote tags, package artifacts, rulesets, or protected branches.
 - PR #1 is open and contains one Copilot review tied to the current pre-rewrite head.
+- The source rebrand was committed as `e36f5c8` and approved/acknowledged under `review-e269ceb8455adf67`; verification bookkeeping is commit `30703fd`. Neither commit has been pushed to the fork.
+- `git-filter-repo` 2.47.0 was installed in an isolated private temporary Python environment outside the repository with the user's explicit authorization; the working repository's history and refs were not rewritten.
 - GitHub will continue to expose the upstream parent while the repository remains a fork.
 
 ## Next Step
