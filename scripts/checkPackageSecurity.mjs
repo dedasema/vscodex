@@ -174,6 +174,7 @@ async function checkIgnoreFile() {
     .map((line) => line.trim())
     .filter(Boolean));
   for (const required of [
+    '.atl/**',
     '.github/**',
     '.vscode/**',
     '.vscode-test/**',
@@ -182,6 +183,7 @@ async function checkIgnoreFile() {
     'src/**',
     'test/**',
     'node_modules/**',
+    'odd/**',
     'assets/*.svg',
     '**/AGENTS.md',
     'out/**/*.map',

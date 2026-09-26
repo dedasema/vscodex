@@ -52,11 +52,15 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
   - Commit: `9956180` (`test(app-server): validate passive thread config`).
   - Native review: approved and acknowledged under lineage `review-a1a2e960c6ae3df8`.
 - [ ] **PDT-4 — Normalize temporary diagnostics**
-  - Route: delegated writer because production normalization will touch multiple non-trivial files.
-  - Apply the smallest architecture-compliant production fix supported by PDT-3 evidence.
-  - Remove the `create_file`-only filter and raw-alias exception after the cause is established.
-  - Keep only diagnostics or probes that provide durable development value.
-  - Run the applicable project checks and record the final commit identity.
+  - Route: delegated writer because production normalization touches multiple non-trivial files.
+  - Production commit: `f0e0bef` (`fix(app-server): restore caller dynamic tool catalog`).
+  - Exact committed-range native review: approved and acknowledged under lineage `review-d7798e395786da7b`.
+  - Focused checks and compile/host/app-server/security/notices checks passed.
+  - Packaging correction excludes `.atl/**` and `odd/**` and requires both exact entries in package security acceptance without relaxing the VSIX allowlist.
+  - Independent verification passed `check:security`, pre-release packaging, and `check:package`; compilation left no tracked build-output changes.
+  - Ambient native review approved and acknowledged the current workspace target under lineage `review-a118a90dd10115f2`; exact correction commit review remains pending.
+  - `test:real-app-server` remains environmentally blocked because the private CodexVS home is signed out.
+  - Close after the packaging correction has its own commit and exact review evidence.
 
 ## Acceptance Criteria
 
@@ -84,9 +88,15 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - PDT-4 removed only the process-level `code_mode_host` disable, retained per-thread `features.code_mode_host: false`, restored the full caller tool catalog and deterministic aliases, removed temporary tool-name diagnostics, and added focused boundary coverage.
 - PDT-4 verification passed: `npm run check`, `npm run test:unit` (10/10), `npm run test:smoke`, probe syntax, and the live production-thread-config probe (`RESULT: PASS`).
 - The live probe still emitted a non-fatal MCP HTTP 404 because the standalone script inherits cwd/environment and does not prove production MCP isolation; this caveat predates PDT-4 and production isolation remains separately tested.
-- Native ambient review approved and acknowledged target `sha256:fe1dd175f017bae05a3466cca0c5625edf98b030eddeb45ee4277e15645fcc40` under lineage `review-c060212be81e9569`; that ambient target also contained the preserved unrelated `.gitignore` residue, so the exact intended work-unit commit will be assessed separately.
-- Current reviewed boundary: `9956180`.
+- Native ambient review approved and acknowledged target `sha256:fe1dd175f017bae05a3466cca0c5625edf98b030eddeb45ee4277e15645fcc40` under lineage `review-c060212be81e9569`; that ambient target also contained the preserved unrelated `.gitignore` residue.
+- Exact PDT-4 commit `f0e0bef` was independently assessed as high risk, reviewed across all four lenses, approved, and acknowledged under lineage `review-d7798e395786da7b`.
+- Closure checks passed compile, extension-host, unauthenticated app-server, security, and notices. `test:real-app-server` is blocked by the signed-out private CodexVS home.
+- VSIX packaging initially failed because `.atl/skill-registry.md`, `.atl/.skill-registry.cache.json`, and `odd/tasks/diagnose-passive-dynamic-tools.md` were included outside the package allowlist.
+- The packaging correction adds `.atl/**` and `odd/**` to `.vscodeignore` and makes both entries mandatory in `scripts/checkPackageSecurity.mjs`.
+- Independent verification passed `npm run check:security`, `npm run package:vsix -- --pre-release`, and `npm run check:package`; scoped diff is 2 files and 4 insertions, allowlist logic is unchanged, and compilation produced no tracked output differences.
+- Ambient native review approved and acknowledged target `sha256:e1d09bf8a2ce8e6d35593d332e621dbc3c44f44b0323d29c4f444c49bbb6068b` under lineage `review-a118a90dd10115f2`; the ambient target also contains preserved unrelated `.gitignore` residue.
+- Current exact reviewed boundary: `f0e0bef`.
 
 ## Next Step
 
-Commit the exact PDT-4 files without `.gitignore`, assess/review that committed work unit, push it, then record the commit identity and close the task.
+Commit only `.vscodeignore`, `scripts/checkPackageSecurity.mjs`, and this ODD document; review the exact committed range; then record evidence and close PDT-4.
