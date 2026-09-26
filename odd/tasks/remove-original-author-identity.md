@@ -24,16 +24,16 @@ Remove the original author's non-mandatory identity from the fork's current sour
 
 ## Tasks
 
-- [ ] **OAI-1 — Rebrand current source metadata**
-  - Replace removable upstream author, owner, repository, support, release, and Marketplace metadata with fork-local `dedasema` values.
-  - Keep the MIT license and third-party notices unchanged.
-  - Update package-security acceptance so it enforces the new publisher and fork URLs while still validating the exact legal license content without duplicating the original author name outside `LICENSE`.
-  - Add or update deterministic checks for the rebranded metadata.
-  - Commit as a focused conventional work unit without `.gitignore`.
-- [ ] **OAI-2 — Verify the rebranded source and package**
-  - Run syntax/type, security, notices, unit, smoke, packaging, and package-content checks applicable to metadata and distribution changes.
-  - Confirm the built VSIX identifies as `dedasema.codexvs` and includes unchanged legal notices.
-  - Record any environmental or Marketplace blockers explicitly.
+- [x] **OAI-1 — Rebrand current source metadata**
+  - Replaced removable upstream author, owner, repository, support, release, and Marketplace metadata with fork-local `dedasema` values.
+  - Kept the MIT license and third-party notices byte-for-byte unchanged.
+  - Package security now enforces the new publisher and fork URLs and pins the CRLF-normalized legal license SHA-256 without duplicating its original author literal outside `LICENSE`.
+  - Commit: `e36f5c8` (`chore(package): rebrand fork metadata`); exact committed-range native review approved and acknowledged under `review-e269ceb8455adf67`.
+- [x] **OAI-2 — Verify the rebranded source and package**
+  - Independent verifier passed syntax, `npm run check`, `check:security`, `check:notices`, unit (10/10), smoke (1/1), pre-release VSIX packaging (10 files, 1.01 MB), and `check:package`.
+  - The source and packaged manifests identify `dedasema.codexvs`; existing command/settings/provider namespaces remain `codexvs`.
+  - `LICENSE` and `THIRD_PARTY_NOTICES.md` are unchanged, and tracked-source search finds the original identity only in `LICENSE:3`.
+  - Publishing remains blocked until the `dedasema` Marketplace publisher exists. The fork has no release/tag for the README download link, and fork Issues are disabled; remote link availability and security-advisory enablement were not independently verified.
 - [ ] **OAI-3 — Authorize and execute history cleanup**
   - Build an access-controlled mirror backup and old-to-new commit map outside the repository.
   - Rewrite only the original author's commit/tag identity to `CodexVS Contributor <noreply@users.noreply.github.com>`.
@@ -58,4 +58,4 @@ Remove the original author's non-mandatory identity from the fork's current sour
 
 ## Next Step
 
-Implement OAI-1 through a bounded writer, then independently verify the current-tree rebrand before proposing any history rewrite or force-push.
+Design and present the exact backup, root-commit/tag rewrite, PR #1 impact, and fork-ref force-push plan. Do not run any history mutation until the user explicitly approves that destructive boundary.
