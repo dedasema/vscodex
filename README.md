@@ -1,6 +1,6 @@
 # CodexVS
 
-[![CI](https://github.com/merceralex397-collab/vscodex/actions/workflows/ci.yml/badge.svg)](https://github.com/merceralex397-collab/vscodex/actions/workflows/ci.yml)
+[![CI](https://github.com/dedasema/vscodex/actions/workflows/ci.yml/badge.svg)](https://github.com/dedasema/vscodex/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 CodexVS is a native VS Code `LanguageModelChatProvider` backed by the official Codex app-server. It lets VS Code and GitHub Copilot use your shared ChatGPT Codex account for model discovery, reasoning, streaming responses, conversation state, and account limits.
@@ -24,7 +24,7 @@ Remote SSH, WSL, and dev-container extension hosts need their own Codex CLI inst
 
 ## Installation
 
-Install the pre-release from the VS Code Marketplace once it is published, or download the VSIX and matching SHA-256 file from the [v0.2.1 pre-release](https://github.com/merceralex397-collab/vscodex/releases/tag/v0.2.1-pre).
+Install the pre-release from the VS Code Marketplace once it is published, or download the VSIX and matching SHA-256 file from the [v0.2.1 pre-release](https://github.com/dedasema/vscodex/releases/tag/v0.2.1-pre).
 
 ```powershell
 code --install-extension codexvs-0.2.1-pre-release.vsix --force
@@ -161,10 +161,8 @@ The real-account suite is opt-in and uses the existing shared ChatGPT login. Pub
 
 ## Ownership and licensing
 
-Copyright © 2026 merceralex397-collab.
+See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for source and bundled dependency notices.
 
-CodexVS is released under the [MIT License](LICENSE). Bundled third-party software remains under its own terms; required notices are shipped in `THIRD_PARTY_NOTICES.md`.
-
-Questions and reproducible bug reports belong in [GitHub Issues](https://github.com/merceralex397-collab/vscodex/issues). Please read [Support](SUPPORT.md), [Contributing](CONTRIBUTING.md), and [Security](SECURITY.md) before filing.
+Questions and reproducible bug reports belong in [GitHub Issues](https://github.com/dedasema/vscodex/issues). Please read [Support](SUPPORT.md), [Contributing](CONTRIBUTING.md), and [Security](SECURITY.md) before filing.
 
 See [Architecture](docs/ARCHITECTURE.md) and [Development](docs/DEVELOPMENT.md) for implementation details.

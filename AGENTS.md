@@ -39,4 +39,4 @@ CodexVS is a native VS Code `LanguageModelChatProvider`. VS Code and its calling
 
 Use TypeScript with two-space indentation, semicolons, single quotes, explicit domain types, and small focused modules. Use `apply_patch` for handwritten edits. Never commit credentials, VSIX artifacts, runtime state, or private logs.
 
-Release `0.2.1` as Marketplace pre-release `v0.2.1-pre`. The package identity is `merceralex397-collab.codexvs`, command/settings namespace is `codexvs`, provider vendor is `codexvs`, and app-server client name is `codexvs`.
+Release `0.2.1` as Marketplace pre-release `v0.2.1-pre`. The package identity is `dedasema.codexvs`, command/settings namespace is `codexvs`, provider vendor is `codexvs`, and app-server client name is `codexvs`.

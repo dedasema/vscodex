@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { access, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,6 +11,7 @@ const packagePath = path.join(repositoryRoot, 'package.json');
 const bundlePath = path.join(repositoryRoot, 'out', 'extension.js');
 const manifest = JSON.parse(await readFile(packagePath, 'utf8'));
 const errors = [];
+const EXPECTED_LICENSE_SHA256 = '6fcc924628422ba0853c6d0dccc3a0508807aac6e73e95945f2226b0702d06b3';
 
 checkManifest(manifest);
 await checkSourceLicense();
@@ -35,16 +37,17 @@ process.stdout.write(vsixArgument === undefined
 function checkManifest(packageJson) {
   reject(packageJson.name !== 'codexvs', 'Package name must be codexvs.');
   reject(packageJson.displayName !== 'CodexVS', 'Display name must be CodexVS.');
-  reject(packageJson.publisher !== 'merceralex397-collab', 'Publisher must be merceralex397-collab.');
+  reject(packageJson.publisher !== 'dedasema', 'Publisher must be dedasema.');
+  reject(packageJson.author !== 'dedasema', 'Author must be dedasema.');
   reject(packageJson.version !== '0.2.1', 'Release manifest version must be 0.2.1.');
   reject(packageJson.license !== 'MIT', 'CodexVS must declare the MIT source license.');
   reject(packageJson.private !== true, 'The package must be private to prevent accidental npm publication.');
-  reject(packageJson.homepage !== 'https://github.com/merceralex397-collab/vscodex#readme',
-    'Manifest homepage must point to the public repository README.');
-  reject(packageJson.bugs?.url !== 'https://github.com/merceralex397-collab/vscodex/issues',
-    'Manifest bugs URL must point to the public issue tracker.');
-  reject(packageJson.repository?.url !== 'https://github.com/merceralex397-collab/vscodex.git',
-    'Repository URL is not the CodexVS repository.');
+  reject(packageJson.homepage !== 'https://github.com/dedasema/vscodex#readme',
+    'Manifest homepage must point to the fork README.');
+  reject(packageJson.bugs?.url !== 'https://github.com/dedasema/vscodex/issues',
+    'Manifest bugs URL must point to the fork issue tracker.');
+  reject(packageJson.repository?.url !== 'https://github.com/dedasema/vscodex.git',
+    'Repository URL is not the CodexVS fork.');
   reject(packageJson.icon !== 'assets/vscodex.png', 'Manifest must use the original CodexVS icon.');
   const allDependencies = {
     ...packageJson.dependencies,
@@ -103,8 +106,9 @@ async function checkSourceLicense() {
   }
   const source = await readFile(licensePath, 'utf8');
   reject(!/^MIT License\r?\n/.test(source), 'LICENSE must contain the MIT License.');
-  reject(!source.includes('Copyright (c) 2026 merceralex397-collab'),
-    'LICENSE must contain the expected copyright holder.');
+  const normalizedSource = source.replace(/\r\n/g, '\n');
+  const sourceHash = createHash('sha256').update(normalizedSource, 'utf8').digest('hex');
+  reject(sourceHash !== EXPECTED_LICENSE_SHA256, 'LICENSE contents differ from the expected legal notice.');
 }
 
 async function checkRemovedSourcePaths() {
