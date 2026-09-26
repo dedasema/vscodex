@@ -51,16 +51,14 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
   - Verification: `features.code_mode_host: false` remained active and the probe emitted `item/tool/call`; the process-level flag, not the per-thread false setting, suppresses client dynamic tools.
   - Commit: `9956180` (`test(app-server): validate passive thread config`).
   - Native review: approved and acknowledged under lineage `review-a1a2e960c6ae3df8`.
-- [ ] **PDT-4 — Normalize temporary diagnostics**
+- [x] **PDT-4 — Normalize temporary diagnostics**
   - Route: delegated writer because production normalization touches multiple non-trivial files.
   - Production commit: `f0e0bef` (`fix(app-server): restore caller dynamic tool catalog`).
-  - Exact committed-range native review: approved and acknowledged under lineage `review-d7798e395786da7b`.
-  - Focused checks and compile/host/app-server/security/notices checks passed.
-  - Packaging correction excludes `.atl/**` and `odd/**` and requires both exact entries in package security acceptance without relaxing the VSIX allowlist.
-  - Independent verification passed `check:security`, pre-release packaging, and `check:package`; compilation left no tracked build-output changes.
-  - Ambient native review approved and acknowledged the current workspace target under lineage `review-a118a90dd10115f2`; exact correction commit review remains pending.
-  - `test:real-app-server` remains environmentally blocked because the private CodexVS home is signed out.
-  - Close after the packaging correction has its own commit and exact review evidence.
+  - Production native review: approved and acknowledged under lineage `review-d7798e395786da7b`.
+  - Packaging correction commit: `280398f` (`fix(package): exclude local harness state`).
+  - Packaging native review: approved and acknowledged under lineage `review-87d7030f7a1e893a`.
+  - Focused checks, compile, host, app-server, security, notices, pre-release packaging, and package validation passed.
+  - The private real-app-server check remains environmentally blocked because the isolated CodexVS home is signed out.
 
 ## Acceptance Criteria
 
@@ -95,8 +93,9 @@ The current probe also contains a declared-tool/prompt-name mismatch. That misma
 - The packaging correction adds `.atl/**` and `odd/**` to `.vscodeignore` and makes both entries mandatory in `scripts/checkPackageSecurity.mjs`.
 - Independent verification passed `npm run check:security`, `npm run package:vsix -- --pre-release`, and `npm run check:package`; scoped diff is 2 files and 4 insertions, allowlist logic is unchanged, and compilation produced no tracked output differences.
 - Ambient native review approved and acknowledged target `sha256:e1d09bf8a2ce8e6d35593d332e621dbc3c44f44b0323d29c4f444c49bbb6068b` under lineage `review-a118a90dd10115f2`; the ambient target also contains preserved unrelated `.gitignore` residue.
-- Current exact reviewed boundary: `f0e0bef`.
+- Packaging correction commit `280398f` was independently verified and its exact committed range was approved and acknowledged under lineage `review-87d7030f7a1e893a`.
+- Current exact reviewed boundary: `280398f`.
 
 ## Next Step
 
-Commit only `.vscodeignore`, `scripts/checkPackageSecurity.mjs`, and this ODD document; review the exact committed range; then record evidence and close PDT-4.
+Push the completed feature branch, then prepare the selected stacked-to-main review slices without including the preserved `.gitignore` residue.
