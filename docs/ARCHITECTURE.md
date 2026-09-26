@@ -19,7 +19,7 @@ Codex app-server
 
 ## Trust boundary
 
-The app-server child receives no workspace cwd or capability root. It runs in an extension-controlled empty directory with a sanitized environment. API-key and access-token variables are removed; the normal `CODEX_HOME` remains so official ChatGPT authentication is shared without the extension reading credentials.
+The app-server child receives no workspace cwd or capability root. It runs in an extension-controlled empty directory with a sanitized environment. API-key and access-token variables are removed; an extension-controlled persistent private `CODEX_HOME` is supplied for official CodexVS sign-in. The extension never reads global `~/.codex` configuration, instructions, or credentials.
 
 All Codex built-in capabilities are disabled before `app-server --stdio`. Every server-initiated request except `item/tool/call` is declined. Built-in execution, filesystem, MCP, browser, web, computer, image, plugin, skill, memory, goal, hook, and multi-agent events are invariant violations that interrupt the affected turn.
 
@@ -61,4 +61,4 @@ VS Code supplies only user and assistant message roles through the Language Mode
 
 ## Authentication and discovery
 
-Silent account discovery uses token-free `getAuthStatus` and `account/read`. Only ChatGPT auth is accepted. Browser login is preferred locally and device code remotely. Model discovery pages through `model/list` without fabricating fallbacks. Account limits use rate-limit reads and authoritative sparse notifications.
+Silent account discovery uses token-free `getAuthStatus` and `account/read`. Only ChatGPT auth is accepted. On first run, browser login is preferred locally and device code remotely through CodexVS. The private home is reused for fresh app-server children; after a restart, **Codex: Show Account Status** checks the account through the official RPC. A live authenticated CLI check is still required to establish login persistence for a particular CLI release. Model discovery pages through `model/list` without fabricating fallbacks. Account limits use rate-limit reads and authoritative sparse notifications.

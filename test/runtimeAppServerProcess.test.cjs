@@ -179,6 +179,17 @@ void (async () => {
     assert.equal(spawned.length, 2);
     assert.equal(manager.generation, 3);
     assert.equal(manager.state, 'ready');
+    assert.equal(
+      spawned[1].options.env.CODEX_HOME,
+      expectedCodexHome,
+      'fresh app-server children must reuse the extension-controlled private home'
+    );
+    assert.notEqual(
+      spawned[1].options.cwd,
+      spawned[0].options.cwd,
+      'fresh app-server children must receive a new disposable cwd'
+    );
+    assert.deepEqual(await readdir(spawned[1].options.cwd), []);
 
     await manager.shutdown();
     assert.equal(manager.state, 'idle');

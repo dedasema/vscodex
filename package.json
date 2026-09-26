@@ -1,7 +1,7 @@
 {
   "name": "codexvs",
   "displayName": "CodexVS",
-  "description": "Use Codex models in VS Code and GitHub Copilot through the official Codex app-server and your shared ChatGPT login.",
+  "description": "Use Codex models in VS Code and GitHub Copilot through the official Codex app-server and a private CodexVS ChatGPT sign-in.",
   "icon": "assets/vscodex.png",
   "version": "0.2.1",
   "publisher": "dedasema",

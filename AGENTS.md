@@ -7,7 +7,7 @@ CodexVS is a native VS Code `LanguageModelChatProvider`. VS Code and its calling
 - Do not add direct ChatGPT HTTP calls, OpenAI SDK transport, custom backend URLs, API-key authentication, token parsing, or credential-file access.
 - Require stable Codex CLI 0.144.4 or newer. Reject prereleases by default, warn above the latest release-validated version, and fail progressively on concrete incompatible operations.
 - Keep app-server in an extension-controlled empty cwd with no workspace/capability roots.
-- Keep `CODEX_HOME` for shared official login, but remove API-key/access-token environment variables from the child.
+- Keep an extension-controlled persistent private `CODEX_HOME` for official CodexVS sign-in, but remove API-key/access-token environment variables from the child. Never read global `~/.codex` configuration, instructions, or credentials.
 - Disable every Codex built-in capability. Only caller-supplied `item/tool/call` may cross the boundary, and VS Code executes it.
 - Never expose Codex-configured MCP servers. Use the redacted plain-text enumeration strategy to prove process-local disabling without changing global configuration or requesting JSON output.
 - Keep minimal internal wire types plus strict validators for required fields. Ignore unknown optional fields and notifications.

@@ -1005,7 +1005,7 @@ export class CodexAppServerBackend implements CodexBackend {
   private async handleAccountChanged(generation: number): Promise<void> {
     this.cachedModels = undefined;
     this.accountUsage.invalidate();
-    await this.turnCoordinator.invalidateAll('The shared Codex account changed.');
+    await this.turnCoordinator.invalidateAll('The private CodexVS account changed.');
     if (generation !== this.auth.generation) {
       return;
     }
@@ -1165,7 +1165,7 @@ export class CodexAppServerBackend implements CodexBackend {
     const result = await operation();
     if (accountGeneration !== this.auth.generation || !this.auth.account) {
       this.accountUsage.invalidate();
-      throw new AppServerProtocolError('The shared Codex account changed while account usage was being read.');
+      throw new AppServerProtocolError('The private CodexVS account changed while account usage was being read.');
     }
     return result;
   }

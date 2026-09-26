@@ -16,21 +16,23 @@ Make caller-owned VS Code dynamic tools usable with a private CodexVS `CODEX_HOM
 
 ## Tasks
 
-- [ ] **FPR-1 — Make the diagnostic probe fail safely**
+- [x] **FPR-1 — Make the diagnostic probe fail safely**
   - The child environment now drops API-key/access-token variables case-insensitively and preserves `CODEX_HOME`; direct home-path logging was removed.
   - A completed turn without a dynamic call now prints `RESULT: FAIL` and exits 1; the successful fake-tool exchange exits 0.
   - A temporary fake Codex child exercises real subprocess exit codes and environment filtering without exposing secret values.
   - Independent verification passed probe/helper syntax, focused subprocess tests (5/5), all unit tests (15/15), and diff whitespace checks.
   - Remaining diagnostic limitations: the standalone probe inherits cwd, does not prove MCP parity, and does not validate arbitrary server-output redaction or every tool-call identity. Live authenticated validation is deferred.
-  - Commit and exact native review pending.
+  - Committed as `bd93d00` (`fix(probe): sanitize diagnostic child and signal failure`). Native review `review-5448a5bece731722` is blocked before reviewer execution: exact STATUS-issued capture bindings were rejected by the session-local route in both single and complete-group capture, with no mutation. Do not claim approval or start a replacement lineage.
 - [ ] **FPR-2 — Document and verify private official sign-in**
-  - Keep the private home architecture and update inaccurate shared-login wording and tests without changing the app-server authentication transport.
-  - Confirm extension-managed sign-in persists in the private home and never reads global `~/.codex` or `AGENTS.md`.
-  - Verify focused auth/process tests, then commit behavior/tests/docs together.
+  - Production already uses an extension-owned private home and official browser/device sign-in RPC; no process/auth transport change was needed.
+  - Aligned onboarding, trust-boundary docs, package description, sign-out/status UI, backend messages, and real-probe guidance to the private-login contract.
+  - A fake child crash/restart test confirms reuse of the same private `CODEX_HOME` with a fresh empty cwd; this does not prove persistence of a real authenticated CLI login.
+  - Independent verification passed focused runtime test (1/1), `npm run check`, unit tests (15/15), smoke test (1/1), and scoped whitespace checks. Live login/restart check remains pending.
+  - Commit pending; native review capture remains unavailable.
 - [ ] **FPR-3 — Validate the functional candidate**
   - Run check, compile, unit, smoke, extension-host, app-server, notices, security, pre-release package/check, probe syntax and focused live probe.
   - Record the private-home sign-in requirement and any unauthenticated real-app-server blocker.
-  - Independently verify the candidate and review exact work-unit commits when native RDD is enabled.
+  - Independently verify the candidate; native review of `bd93d00` is currently blocked by a session-local capture-route mismatch and requires maintainer resolution before delivery.
 - [ ] **FPR-4 — Prepare the fork-local PR**
   - Resolve the fork's disabled Issues and missing `status:approved` / `type:bug` labels before PR creation under the active branch-PR policy; request explicit user authorization for any repository-setting change or issue publication.
   - Push only a new branch without force after checks/review, then create one new PR to the fork's `main` using its template and disclose the accepted size exception.
@@ -44,4 +46,4 @@ Make caller-owned VS Code dynamic tools usable with a private CodexVS `CODEX_HOM
 
 ## Next Step
 
-Commit only the FPR-1 probe, support helper, focused tests, and this task document. Then review that exact committed work unit; do not include the local `.gitignore` residue.
+Commit the verified FPR-2 docs/UI/test and task status without `.gitignore`. Then run FPR-3 full validation; keep review `review-5448a5bece731722` pending for maintainer resolution rather than minting a replacement lineage.

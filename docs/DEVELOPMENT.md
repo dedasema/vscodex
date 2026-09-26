@@ -18,7 +18,9 @@ Also exercise the model picker's **Thinking Effort** control on a host that supp
 
 On the oldest supported VS Code host, confirm **Codex: Configure Reasoning Effort** builds choices from the live catalog, updates the fallback, and does not require provider configuration UI. Also confirm that an unsupported saved identifier falls back to the selected model's catalog default.
 
-Use **Codex: Show Integration Diagnostics** to capture structural evidence without prompt content. For deeper caller failures, inspect the GitHub Copilot Chat log under the current VS Code logs folder. For app-server failures, use the lifecycle metadata first. Local Codex stores under `CODEX_HOME` and raw stderr may contain private prompts or tool data and must never be copied into fixtures, issues, commits, or VSIX artifacts.
+On first run in the Extension Development Host, use **Codex: Sign in with ChatGPT** (or **Codex: Sign in with Device Code**) to sign in through CodexVS. After restarting the extension host or app-server, use **Codex: Show Account Status** to check the private CodexVS account. The extension reuses its private `CODEX_HOME` for fresh children, but a live authenticated CLI check is required to prove login persistence for a particular CLI release.
+
+Use **Codex: Show Integration Diagnostics** to capture structural evidence without prompt content. For deeper caller failures, inspect the GitHub Copilot Chat log under the current VS Code logs folder. For app-server failures, use the lifecycle metadata first. CodexVS never reads global `~/.codex` configuration, instructions, or credentials. Local stores in the extension-controlled private `CODEX_HOME` and raw stderr may contain private prompts or tool data and must never be copied into fixtures, issues, commits, or VSIX artifacts.
 
 Codex CLI 0.144.4 can emit `Model personality requested but model_messages is missing` for catalog entries even when the effective personality is the official `none` value. The CLI then falls back to the same base instructions. Treat this specific `personality=none` warning as upstream diagnostic noise; any other effective personality is a passive-policy defect.
 

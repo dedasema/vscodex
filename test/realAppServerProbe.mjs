@@ -125,7 +125,7 @@ try {
   assert.match(backend.runtimeVersion ?? '', /^\d+\.\d+\.\d+$/, 'The real probe requires a stable Codex CLI version.');
   const account = await backend.readAccount(false);
   if (!account) {
-    throw new Error('Codex app-server is signed out. Sign in with ChatGPT through Codex CLI, then retry.');
+    throw new Error('Codex app-server is signed out in this probe\'s temporary private home. In CodexVS, sign in on first run with Codex: Sign in with ChatGPT, then restart and use Codex: Show Account Status. This probe does not reuse global ~/.codex or a CodexVS login.');
   }
 
   const neverCancelled = createCancellationToken();
