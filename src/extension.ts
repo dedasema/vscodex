@@ -76,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
       });
       await vscode.window.showInformationMessage(`Signed in to ChatGPT (${account.planType}).`);
-      await accountUsageStatusBar.refresh();
+      await accountUsageStatusBar.refresh().catch(() => {});
     } catch (error) {
       if (error instanceof vscode.CancellationError
         || (error instanceof Error && error.name === 'LoginCancelledError')) {
@@ -204,7 +204,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.window.showInformationMessage('Codex executable updated. Run “Codex: Check App-server Runtime” to validate it.');
     }),
     vscode.commands.registerCommand('codexvs.refreshAccountLimits', async () => {
-      await accountUsageStatusBar.refresh();
       await accountUsageStatusBar.showDetails();
     }),
     vscode.commands.registerCommand('codexvs.manage', async () => {
@@ -219,7 +218,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         ['Configure VS Code Utility Models', 'codexvs.configureUtilityModels'],
         ['Show Integration Diagnostics', 'codexvs.showIntegrationDiagnostics'],
         ['Configure Codex Executable', 'codexvs.configureExecutable'],
-        ['Refresh Account Limits', 'codexvs.refreshAccountLimits'],
+        ['Show Account Limits', 'codexvs.refreshAccountLimits'],
         ['Open Debug Logs', 'codexvs.openDebugLogs'],
         ['Open Settings', 'codexvs.openSettings']
       ]);

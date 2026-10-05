@@ -26,6 +26,29 @@ export interface AccountUsageDisplay {
   isStale: boolean;
 }
 
+export interface AccountUsageWindowViewModel {
+  kind: RateLimitWindowKind;
+  label: string;
+  limitId?: string;
+  limitName?: string;
+  windowMinutes: number;
+  usedPercent: number;
+  remainingPercent: number;
+  resetAt?: number;
+  resetAtLabel?: string;
+  resetRelativeLabel?: string;
+}
+
+export interface CodexAccountUsageViewModel {
+  primaryWindows: AccountUsageWindowViewModel[];
+  otherWindows: AccountUsageWindowViewModel[];
+  planType?: string;
+  creditsBalance?: number;
+  fetchedAt: number;
+  freshness: 'fresh' | 'stale';
+  isStale: boolean;
+}
+
 export function parseCodexAccountUsage(payload: unknown, fetchedAt: number, selectedModel: string): CodexAccountUsageSnapshot {
   const root = getUsageRoot(payload);
   const limits: RateLimitSnapshot[] = [];
@@ -57,16 +80,15 @@ export function buildCodexAccountUsageDisplay(
   selectedModel: string,
   now = Date.now()
 ): AccountUsageDisplay {
-  const fiveHour = selectPreferredLimit(snapshot.limits, '5h', selectedModel);
-  const weekly = selectPreferredLimit(snapshot.limits, 'weekly', selectedModel);
+  const { fiveHour, weekly } = selectPrimaryLimits(snapshot.limits, selectedModel);
   const compactParts: string[] = [];
 
   if (fiveHour) {
-    compactParts.push(`5h ${formatPercent(fiveHour.remainingPercent)}`);
+    compactParts.push(`5h ${formatPercent(fiveHour.remainingPercent)} left`);
   }
 
   if (weekly) {
-    compactParts.push(`weekly ${formatPercent(weekly.remainingPercent)}`);
+    compactParts.push(`wk ${formatPercent(weekly.remainingPercent)} left`);
   }
 
   if (snapshot.creditsBalance !== undefined && (compactParts.length > 0 || (!fiveHour && !weekly))) {
@@ -77,6 +99,32 @@ export function buildCodexAccountUsageDisplay(
     compactText: compactParts.length > 0 ? `Codex: ${compactParts.join(' · ')}` : undefined,
     tooltip: buildTooltip(snapshot, selectedModel, fiveHour, weekly, now),
     isStale: now - snapshot.fetchedAt > STALE_AFTER_MS
+  };
+}
+
+export function buildCodexAccountUsageViewModel(
+  snapshot: CodexAccountUsageSnapshot,
+  selectedModel: string,
+  now: Date
+): CodexAccountUsageViewModel {
+  const { fiveHour, weekly } = selectPrimaryLimits(snapshot.limits, selectedModel);
+  const primaryLimits = [fiveHour, weekly].filter((limit): limit is RateLimitSnapshot => Boolean(limit));
+  const selectedLimits = new Set(primaryLimits);
+  const otherLimits = sortLimitsForDisplay(
+    snapshot.limits.filter((limit) => !selectedLimits.has(limit)),
+    selectedModel
+  );
+  const nowMs = now.getTime();
+  const isStale = nowMs - snapshot.fetchedAt > STALE_AFTER_MS;
+
+  return {
+    primaryWindows: primaryLimits.map((limit) => buildWindowViewModel(limit, nowMs)),
+    otherWindows: otherLimits.map((limit) => buildWindowViewModel(limit, nowMs)),
+    ...(snapshot.planType !== undefined ? { planType: snapshot.planType } : {}),
+    ...(snapshot.creditsBalance !== undefined ? { creditsBalance: snapshot.creditsBalance } : {}),
+    fetchedAt: snapshot.fetchedAt,
+    freshness: isStale ? 'stale' : 'fresh',
+    isStale
   };
 }
 
@@ -321,6 +369,16 @@ function dedupeLimits(limits: RateLimitSnapshot[]): RateLimitSnapshot[] {
   return deduped;
 }
 
+function selectPrimaryLimits(
+  limits: readonly RateLimitSnapshot[],
+  selectedModel: string
+): { fiveHour?: RateLimitSnapshot; weekly?: RateLimitSnapshot } {
+  return {
+    fiveHour: selectPreferredLimit(limits, '5h', selectedModel),
+    weekly: selectPreferredLimit(limits, 'weekly', selectedModel)
+  };
+}
+
 function selectPreferredLimit(
   limits: readonly RateLimitSnapshot[],
   kind: '5h' | 'weekly',
@@ -410,7 +468,7 @@ function formatLimitDetail(limit: RateLimitSnapshot): string {
     `${formatPercent(limit.usedPercent)} used`
   ];
 
-  if (limit.resetAt) {
+  if (limit.resetAt !== undefined) {
     parts.push(`resets ${new Date(limit.resetAt).toLocaleString()}`);
   }
 
@@ -436,6 +494,53 @@ function formatWindowKind(kind: RateLimitWindowKind): string {
     default:
       return 'Other';
   }
+}
+
+function buildWindowViewModel(limit: RateLimitSnapshot, now: number): AccountUsageWindowViewModel {
+  const kind = classifyWindow(limit.windowMinutes);
+  const view: AccountUsageWindowViewModel = {
+    kind,
+    label: kind === 'other' ? `Other (${limit.windowMinutes} minutes)` : formatWindowKind(kind),
+    ...(limit.limitId !== undefined ? { limitId: limit.limitId } : {}),
+    ...(limit.limitName !== undefined ? { limitName: limit.limitName } : {}),
+    windowMinutes: limit.windowMinutes,
+    usedPercent: limit.usedPercent,
+    remainingPercent: limit.remainingPercent
+  };
+
+  if (limit.resetAt !== undefined) {
+    view.resetAt = limit.resetAt;
+    view.resetAtLabel = new Date(limit.resetAt).toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+    view.resetRelativeLabel = formatRelativeReset(limit.resetAt, now);
+  }
+
+  return view;
+}
+
+function formatRelativeReset(resetAt: number, now: number): string {
+  const difference = resetAt - now;
+  if (difference === 0) {
+    return 'Reset time is now';
+  }
+
+  const duration = formatRelativeDuration(Math.ceil(Math.abs(difference) / 60_000));
+  return difference > 0 ? `in ${duration}` : `Reset time passed ${duration} ago`;
+}
+
+function formatRelativeDuration(totalMinutes: number): string {
+  const units: [number, string][] = [
+    [Math.floor(totalMinutes / 1440), 'day'],
+    [Math.floor(totalMinutes % 1440 / 60), 'hour'],
+    [totalMinutes % 60, 'minute']
+  ];
+
+  return units
+    .filter(([value]) => value > 0)
+    .map(([value, unit]) => `${value} ${unit}${value === 1 ? '' : 's'}`)
+    .join(' ');
 }
 
 function formatPercent(value: number): string {
