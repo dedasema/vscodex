@@ -3,7 +3,7 @@
 [![CI](https://github.com/merceralex397-collab/vscodex/actions/workflows/ci.yml/badge.svg)](https://github.com/merceralex397-collab/vscodex/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-CodexVS is a native VS Code `LanguageModelChatProvider` backed by the official Codex app-server. It lets VS Code and GitHub Copilot use your shared ChatGPT Codex account for model discovery, reasoning, streaming responses, conversation state, and account limits.
+CodexVS is a native VS Code `LanguageModelChatProvider` backed by the official Codex app-server. It lets VS Code and GitHub Copilot use a private CodexVS ChatGPT sign-in for model discovery, reasoning, streaming responses, conversation state, and account limits.
 
 VS Code and the calling Copilot agent remain the sole owners of context selection, tools, MCP integrations, command execution, edits, approvals, and permissions. CodexVS never exposes tools configured in Codex itself.
 
@@ -64,9 +64,9 @@ code --user-data-dir .tmp/vscode-profile --extensions-dir .tmp/vscode-extensions
 
 ## Authentication
 
-Codex app-server owns ChatGPT authentication. CodexVS preserves the normal `CODEX_HOME`, so a supported login is shared with Codex CLI and other Codex clients. It never reads or logs credential files or tokens, and it removes API-key/access-token environment variables from the passive child process.
+Codex app-server owns ChatGPT authentication. CodexVS supplies a persistent private `CODEX_HOME`. On first run, sign in with **Codex: Sign in with ChatGPT** or **Codex: Sign in with Device Code**. The extension never reads or logs credential files or tokens, and removes API-key/access-token environment variables from the passive child process.
 
-Signing out removes the shared Codex login and therefore requires confirmation.
+Signing out requires confirmation and affects only the private CodexVS login, not the standalone Codex CLI.
 
 ## MCP and tools
 
@@ -118,7 +118,7 @@ Every model request records a privacy-safe request shape in the CodexVS output: 
 
 - **Codex: Open Debug Logs** opens the `CodexVS` log output. Lifecycle records include runtime version, RPC method, duration, generation, and app-server stderr byte/line counts only.
 - Run **Developer: Open Logs Folder** for VS Code and GitHub Copilot Chat logs. Copilot-side utility-model, tool-schema, and context-ingestion failures appear there rather than in app-server output.
-- Codex uses the normal `CODEX_HOME` (normally `%USERPROFILE%\.codex`). Codex CLI 0.144.4 maintains bounded diagnostic data in files such as `logs_2.sqlite`; the app-server itself writes diagnostics to stderr. These stores can contain prompts and tool data, are private, and are not a stable integration API. CodexVS never reads or packages them.
+- CodexVS uses an extension-controlled private `CODEX_HOME`, not global `%USERPROFILE%\.codex`. Codex CLI 0.144.4 maintains bounded diagnostic data in files such as `logs_2.sqlite`; the app-server itself writes diagnostics to stderr. These stores can contain prompts and tool data, are private, and are not a stable integration API. CodexVS never reads or packages them.
 - The repository ignores `logs/`, `*.log`, and packaged log paths so captured private diagnostics cannot enter source control or a VSIX by accident.
 
 The app-server remains the right official integration surface: it supplies ChatGPT authentication, model discovery, threads, turns, streaming, usage, and caller-executed dynamic tools without adding a private HTTP transport. See the official [Codex app-server documentation](https://developers.openai.com/codex/app-server/).
@@ -157,7 +157,7 @@ npm run package:vsix -- --pre-release
 npm run check:package
 ```
 
-The real-account suite is opt-in and uses the existing shared ChatGPT login. Public CI never stores or imports that login.
+The real-account suite is opt-in and uses its own login, not the global Codex CLI or CodexVS login. From the repository root, run the official `codex login` in a separate shell with `CODEX_HOME` set to the absolute path of `.vscode-test/codexvs-real-app-server/codex-home`. Then run `npm run test:real-app-server` with `CODEX_TEST_USE_DEDICATED_HOME=1`. The probe can consume account quota. Never copy credentials into its home; public CI does not use it.
 
 ## Ownership and licensing
 

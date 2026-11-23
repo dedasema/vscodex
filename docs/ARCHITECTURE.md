@@ -19,7 +19,7 @@ Codex app-server
 
 ## Trust boundary
 
-The app-server child receives no workspace cwd or capability root. It runs in an extension-controlled empty directory with a sanitized environment. API-key and access-token variables are removed; the normal `CODEX_HOME` remains so official ChatGPT authentication is shared without the extension reading credentials.
+The app-server child receives no workspace cwd or capability root. It runs in an extension-controlled empty directory with a sanitized environment. API-key and access-token variables are removed; a persistent private `CODEX_HOME` is supplied for official CodexVS sign-in without the extension reading credentials.
 
 All Codex built-in capabilities are disabled before `app-server --stdio`. Every server-initiated request except `item/tool/call` is declined. Built-in execution, filesystem, MCP, browser, web, computer, image, plugin, skill, memory, goal, hook, and multi-agent events are invariant violations that interrupt the affected turn.
 
@@ -47,7 +47,7 @@ Lifecycle and request diagnostics are structural. App-server stderr is consumed 
 
 ## MCP isolation
 
-Codex clients share MCP configuration through the normal Codex home. A process-local isolation strategy enumerates the redacted plain-text list, builds exact quoted-key disabled overrides, proves the same set is disabled, and supplies the same map at thread creation. The strategy never writes global configuration or requests credential-bearing JSON output.
+CodexVS enumerates MCP configuration from its private Codex home, not the normal home shared by other Codex clients. A process-local isolation strategy enumerates the redacted plain-text list, builds exact quoted-key disabled overrides, proves the same set is disabled, and supplies the same map at thread creation. The strategy never writes global configuration or requests credential-bearing JSON output.
 
 Enumeration is behind `McpIsolationStrategy`; a future documented app-server-wide disable mechanism can replace it without changing process or thread code.
 

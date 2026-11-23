@@ -9,6 +9,11 @@ import { build } from 'esbuild';
 
 const require = createRequire(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+if (process.env.CODEX_TEST_USE_DEDICATED_HOME !== '1') {
+  process.stderr.write('Set CODEX_TEST_USE_DEDICATED_HOME=1 to use the dedicated CodexVS probe login.\n');
+  process.exit(1);
+}
+const probeStorageDirectory = path.join(repositoryRoot, '.vscode-test', 'codexvs-real-app-server');
 const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'codex-real-app-server-'));
 const bundlePath = path.join(temporaryDirectory, 'codex-backend.cjs');
 const command = process.env.CODEX_TEST_CODEX_COMMAND?.trim() || 'codex';
@@ -104,7 +109,7 @@ try {
   const packageJson = JSON.parse(await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'));
   backend = new CodexAppServerBackend({
     extension: { packageJSON: { version: packageJson.version } },
-    globalStorageUri: { fsPath: path.join(temporaryDirectory, 'global-storage') }
+    globalStorageUri: { fsPath: probeStorageDirectory }
   }, {
     debug(message, metadata) {
       recordLog(logs, { level: 'debug', message, metadata });
@@ -125,7 +130,7 @@ try {
   assert.match(backend.runtimeVersion ?? '', /^\d+\.\d+\.\d+$/, 'The real probe requires a stable Codex CLI version.');
   const account = await backend.readAccount(false);
   if (!account) {
-    throw new Error('Codex app-server is signed out. Sign in with ChatGPT through Codex CLI, then retry.');
+    throw new Error('The dedicated probe home is signed out. Follow the real-account probe setup in README.md.');
   }
 
   const neverCancelled = createCancellationToken();

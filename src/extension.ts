@@ -162,7 +162,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('codexvs.signOut', async () => {
       const confirmation = await vscode.window.showWarningMessage(
-        'Signing out removes the shared ChatGPT login used by Codex CLI and other Codex clients on this host.',
+        'Signing out removes only the private ChatGPT login used by CodexVS. It does not sign out Codex CLI or other Codex clients on this host.',
         { modal: true },
         'Sign Out of Codex'
       );
@@ -171,7 +171,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       await backend.logout();
       accountUsageStatusBar.clear();
-      await vscode.window.showInformationMessage('Signed out of the shared Codex ChatGPT account.');
+      await vscode.window.showInformationMessage('Signed out of the private CodexVS ChatGPT account.');
     }),
     vscode.commands.registerCommand('codexvs.checkRuntime', checkRuntime),
     vscode.commands.registerCommand(
