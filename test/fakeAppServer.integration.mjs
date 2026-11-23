@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import Module from 'node:module';
 import os from 'node:os';
@@ -103,6 +103,7 @@ try {
   });
 
   const { CodexAppServerBackend } = require(bundlePath);
+  await testPrivateAccountStorage(CodexAppServerBackend);
   const logs = [];
   backend = new CodexAppServerBackend({
     extension: { packageJSON: { version: '0.2.1' } },
@@ -1082,6 +1083,52 @@ function createCancellationToken() {
       }
     }
   };
+}
+
+async function testPrivateAccountStorage(Backend) {
+  const storage = path.join(temporaryDirectory, 'account-storage');
+  const context = {
+    extension: { packageJSON: { version: '0.2.1' } },
+    globalStorageUri: { fsPath: storage }
+  };
+  const log = { debug() {}, warn() {} };
+  const previous = process.env.CODEX_FAKE_STORAGE_PROBE;
+  process.env.CODEX_FAKE_STORAGE_PROBE = '1';
+  const active = [];
+  const start = async (id) => {
+    const candidate = new Backend(context, log, id);
+    active.push(candidate);
+    await candidate.listModels(createCancellationToken().token);
+    return candidate;
+  };
+  const launches = async (root) => {
+    const content = await readFile(path.join(root, 'codex-home', 'fixture-launches.jsonl'), 'utf8');
+    return content.trim().split(String.fromCharCode(10)).map(JSON.parse);
+  };
+  try {
+    assert.throws(() => new Backend(context, log, '../escape'));
+    await assert.rejects(stat(storage), { code: 'ENOENT' });
+    const first = await start('first');
+    await start('second');
+    await start(undefined);
+    const firstRoot = path.join(storage, 'accounts', 'first');
+    for (const root of [storage, firstRoot, path.join(storage, 'accounts', 'second')]) {
+      const [initial] = await launches(root);
+      assert.equal(path.dirname(initial.cwd), root);
+      assert.match(path.basename(initial.cwd), /^app-server-passive-/);
+      assert.equal(initial.empty, true);
+      assert.equal(initial.priorLaunch, false);
+    }
+    first.dispose();
+    await start('first');
+    const [original, restarted] = await launches(firstRoot);
+    assert.notEqual(restarted.cwd, original.cwd);
+    assert.equal(restarted.priorLaunch, true);
+  } finally {
+    for (const candidate of active) candidate.dispose();
+    if (previous === undefined) delete process.env.CODEX_FAKE_STORAGE_PROBE;
+    else process.env.CODEX_FAKE_STORAGE_PROBE = previous;
+  }
 }
 
 async function createLauncher(directory) {

@@ -20,6 +20,17 @@ if (process.argv.includes('mcp') && process.argv.includes('list')) {
   process.exit(0);
 }
 
+if (process.env.CODEX_FAKE_STORAGE_PROBE === '1') {
+  const { appendFileSync, existsSync, readdirSync } = require('node:fs');
+  const { join } = require('node:path');
+  const record = join(process.env.CODEX_HOME, 'fixture-launches.jsonl');
+  appendFileSync(record, JSON.stringify({
+    cwd: process.cwd(),
+    empty: readdirSync(process.cwd()).length === 0,
+    priorLaunch: existsSync(record)
+  }) + String.fromCharCode(10));
+}
+
 const processMcpOverrideApplied = process.argv.some((argument) =>
   argument.includes('"fixture_mcp"={enabled=false,command="./.codexvs-disabled-mcp"}'));
 

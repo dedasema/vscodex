@@ -167,13 +167,15 @@ export class CodexAppServerBackend implements CodexBackend {
 
   constructor(
     context: vscode.ExtensionContext,
-    private readonly outputChannel: vscode.LogOutputChannel
+    private readonly outputChannel: vscode.LogOutputChannel,
+    accountId?: string
   ) {
     this.effectiveAppServerCommand = getProviderConfig().appServerCommand;
     this.process = new AppServerProcess({
       command: () => this.effectiveAppServerCommand,
       extensionVersion: String(context.extension.packageJSON.version),
       storageDirectory: context.globalStorageUri.fsPath,
+      accountId,
       onDiagnostic: (event) => this.logDiagnostic(event)
     });
     this.auth = new AuthController(this.process);

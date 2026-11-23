@@ -1,6 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { mkdir, mkdtemp, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { accountStorageDirectory } from './accountStorage';
 import {
   DEFAULT_JSON_RPC_TIMEOUT_MS,
   DEFAULT_SERVER_REQUEST_TIMEOUT_MS,
@@ -77,6 +78,7 @@ export interface AppServerProcessOptions {
   readonly extensionVersion: string;
   /** Parent directory under extension global storage. */
   readonly storageDirectory: string;
+  readonly accountId?: string;
   readonly env?: NodeJS.ProcessEnv;
   readonly startupTimeoutMs?: number;
   readonly mcpIsolationTimeoutMs?: number;
@@ -146,6 +148,7 @@ export class AppServerProcess implements Disposable {
   private readonly requestTimeoutMs: number;
   private readonly serverRequestTimeoutMs: number;
   private readonly shutdownTimeoutMs: number;
+  private readonly storageDirectory: string;
   private readonly runtimeValidator: NonNullable<AppServerProcessOptions['validateRuntime']>;
   private stateValue: AppServerProcessState = 'idle';
   private generationValue = 0;
@@ -156,6 +159,7 @@ export class AppServerProcess implements Disposable {
   private disposed = false;
 
   constructor(private readonly options: AppServerProcessOptions) {
+    this.storageDirectory = accountStorageDirectory(options.storageDirectory, options.accountId);
     this.startupTimeoutMs = options.startupTimeoutMs ?? APP_SERVER_STARTUP_TIMEOUT_MS;
     this.mcpIsolationTimeoutMs = options.mcpIsolationTimeoutMs ?? MCP_LIST_TIMEOUT_MS;
     this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_JSON_RPC_TIMEOUT_MS;
@@ -328,13 +332,13 @@ export class AppServerProcess implements Disposable {
     let passiveCodexHome: string;
 
     try {
-      await mkdir(this.options.storageDirectory, { recursive: true });
+      await mkdir(this.storageDirectory, { recursive: true });
 
-      passiveCodexHome = join(this.options.storageDirectory, 'codex-home');
+      passiveCodexHome = join(this.storageDirectory, 'codex-home');
       await mkdir(passiveCodexHome, { recursive: true });
 
       passiveDirectory = await mkdtemp(
-        join(this.options.storageDirectory, 'app-server-passive-')
+        join(this.storageDirectory, 'app-server-passive-')
       );
     } catch (error) {
       this.stateValue = this.disposed ? 'stopped' : 'idle';
