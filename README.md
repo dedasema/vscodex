@@ -71,11 +71,21 @@ CodexVS never reads, copies, or logs credential files or tokens. It does not use
 
 Signing out removes only the private CodexVS login and therefore requires confirmation; it does not sign out Codex CLI or other Codex clients on the host.
 
+## Use multiple ChatGPT accounts
+
+Your existing private login stays under **Default account**. To add another:
+
+1. Run **Codex: Add Account** and enter a label, not an email address or credential.
+2. Run **Codex: Sign in with ChatGPT** (or **Codex: Sign in with Device Code**) and pick the new account. Complete sign-in in the official Codex flow.
+3. In Copilot Chat, pick a model marked with that account label. Use a new chat if you don't want to send the previous chat's context to a different account.
+
+Each account has its own private Codex home, login, and backend. A limit or sign-in error never switches accounts. **Codex: Show Account Status** and **Codex: Sign Out** ask which account to use when you have more than one. Signing out does not remove the profile or affect another account.
+
 ## Account limits
 
 Open **Codex: Show Account Limits** from the Command Palette or click the Codex account-limits status item. The command opens or reuses a themed dashboard beside the editor and refreshes its data; use **Refresh** inside the dashboard to request another update.
 
-The dashboard shows only returned quota windows, remaining percentages, reset times, and known plan/credit information—not token balances inferred from percentages. Loading, empty, older-data, and refresh-failure states distinguish unavailable data from current limits. Cached limits may remain visible after a refresh failure; account changes clear them immediately. The compact status item follows the selected model and is hidden when no limits are available.
+The dashboard shows only returned quota windows, remaining percentages, reset times, and known plan/credit information—not token balances inferred from percentages. Loading, empty, older-data, and refresh-failure states distinguish unavailable data from current limits. Cached limits may remain visible after a refresh failure; account changes clear them immediately. The dashboard and compact status item show the default account. The status item follows the selected model only when it belongs to the default account and is hidden when no limits are available.
 
 ## MCP and tools
 

@@ -194,6 +194,43 @@ try {
   );
   responseProvider.dispose();
 
+  const work = createBackend();
+  work.listModels = responseBackend.listModels;
+  const calls = [];
+  let failWork = false;
+  work.runChat = async () => {
+    calls.push('work');
+    if (failWork) throw new Error('Work account exhausted');
+    return { kind: 'completed' };
+  };
+  responseBackend.runChat = async () => { calls.push('legacy'); return { kind: 'completed' }; };
+  const usageModels = [];
+  const multi = new CodexVSProvider(output, responseBackend, {
+    setSelectedModel: (id) => usageModels.push(id)
+  }, undefined, {
+    list: () => [{ id: 'work', label: 'Work' }],
+    get: (id) => id === 'work' ? work : undefined
+  });
+  const [legacy, named] = await multi.provideLanguageModelChatInformation({ silent: true }, token);
+  assert.equal(legacy.id, responseModels[0].id);
+  assert.equal(named.name, 'GPT Ultra · Work');
+  const send = (model) => multi.provideLanguageModelChatResponse(model, [], {}, { report() {} }, token);
+  await send(named);
+  assert.deepEqual(usageModels, []);
+  await send(legacy);
+  assert.deepEqual(usageModels, ['gpt-5.5']);
+  failWork = true;
+  await assert.rejects(send(named));
+  await assert.rejects(send({ ...named, id: 'codex-account::unknown::gpt-ultra-entry' }));
+  await assert.rejects(send({ ...named, id: 'codex-account::work::gpt-5.5' }));
+  assert.deepEqual(calls, ['work', 'legacy', 'work']);
+  failWork = false;
+  responseBackend.listModels = async () => { throw new Error('Default account unavailable'); };
+  assert.deepEqual(await multi.provideLanguageModelChatInformation({ silent: false }, token), [named]);
+  await send(named);
+  assert.deepEqual(calls, ['work', 'legacy', 'work', 'work']);
+  multi.dispose();
+
   const selected = {
     reasoningEffort: 'max',
     supportedReasoningEfforts: ['low', 'high', 'max', 'ultra', 'future-mode']

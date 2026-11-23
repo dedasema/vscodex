@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { NamedAccountRegistry } from './accounts';
 import { CodexAccountUsageStatusBar } from './accountUsageStatusBar';
 import { CodexAppServerBackend } from './appServer/codexBackend';
 import {
@@ -19,27 +20,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   await vscode.workspace.fs.createDirectory(context.globalStorageUri);
 
   const backend = new CodexAppServerBackend(context, outputChannel);
+  const namedAccounts = new NamedAccountRegistry(context.globalState,
+    (id) => new CodexAppServerBackend(context, outputChannel, id));
   const accountUsageStatusBar = new CodexAccountUsageStatusBar(outputChannel, backend);
   const integrationAdvisor = new VsCodeIntegrationAdvisor(outputChannel);
   const provider = new CodexVSProvider(
     outputChannel,
     backend,
     accountUsageStatusBar,
-    integrationAdvisor
+    integrationAdvisor,
+    namedAccounts
   );
-  let activeLoginId: string | undefined;
+  let activeLogin: { readonly target: CodexAppServerBackend; id?: string } | undefined;
+
+  const chooseAccount = async (title: string) => {
+    const accounts = namedAccounts.list();
+    if (accounts.length === 0) return { target: backend, label: 'Default account' };
+    const selected = await vscode.window.showQuickPick([
+      { label: 'Default account', description: 'Existing private login', id: undefined },
+      ...accounts.map((account) => ({ ...account, description: 'Named account' }))
+    ], { title });
+    if (!selected) return undefined;
+    const target = selected.id ? namedAccounts.get(selected.id) : backend;
+    return target ? { target, label: selected.label } : undefined;
+  };
 
   const signIn = async (kind: 'browser' | 'deviceCode'): Promise<void> => {
-    if (activeLoginId) {
+    const selected = await chooseAccount('Select the Codex account to sign in');
+    if (!selected) return;
+    const { target } = selected;
+    if (activeLogin) {
       await vscode.window.showInformationMessage('A ChatGPT sign-in is already in progress.');
       return;
     }
 
-    let challenge: Awaited<ReturnType<CodexAppServerBackend['beginLogin']>> | undefined;
+    const login: { target: CodexAppServerBackend; id?: string } = { target };
+    activeLogin = login;
     try {
-      challenge = await backend.beginLogin(kind);
-      const loginChallenge = challenge;
-      activeLoginId = loginChallenge.loginId;
+      const loginChallenge = await target.beginLogin(kind);
+      login.id = loginChallenge.loginId;
       if (loginChallenge.kind === 'browser') {
         await vscode.env.openExternal(vscode.Uri.parse(loginChallenge.authUrl));
       } else {
@@ -50,7 +69,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           'Cancel'
         );
         if (action === 'Cancel' || !action) {
-          await backend.cancelLogin(challenge.loginId);
+          await target.cancelLogin(loginChallenge.loginId);
           return;
         }
         if (action === 'Copy Code and Open') {
@@ -67,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         cancellable: true
       }, async (_progress, cancellationToken) => {
         const cancellation = cancellationToken.onCancellationRequested(() => {
-          void backend.cancelLogin(loginChallenge.loginId).catch(() => undefined);
+          void target.cancelLogin(loginChallenge.loginId).catch(() => undefined);
         });
         try {
           return await loginChallenge.completion;
@@ -76,7 +95,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
       });
       await vscode.window.showInformationMessage(`Signed in to ChatGPT (${account.planType}).`);
-      await accountUsageStatusBar.refresh().catch(() => {});
+      provider.refreshAccounts();
+      if (target === backend) await accountUsageStatusBar.refresh().catch(() => {});
     } catch (error) {
       if (error instanceof vscode.CancellationError
         || (error instanceof Error && error.name === 'LoginCancelledError')) {
@@ -85,9 +105,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await vscode.window.showErrorMessage(error instanceof Error ? error.message : 'ChatGPT sign-in failed.');
       }
     } finally {
-      if (challenge && activeLoginId === challenge.loginId) {
-        activeLoginId = undefined;
-      }
+      if (activeLogin === login) activeLogin = undefined;
     }
   };
 
@@ -128,6 +146,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     outputChannel,
     backend,
+    namedAccounts,
     accountUsageStatusBar,
     provider,
     vscode.lm.registerLanguageModelChatProvider('codexvs', provider),
@@ -142,35 +161,51 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       () => signIn(vscode.env.remoteName ? 'deviceCode' : 'browser')
     ),
     vscode.commands.registerCommand('codexvs.signInWithDeviceCode', () => signIn('deviceCode')),
+    vscode.commands.registerCommand('codexvs.addAccount', async () => {
+      const label = await vscode.window.showInputBox({ title: 'Add Codex Account', prompt: 'Enter a label for the account.' });
+      if (label === undefined) return;
+      try {
+        const account = await namedAccounts.add(label);
+        provider.refreshAccounts();
+        await vscode.window.showInformationMessage(`Created “${account.label}”. Run “Codex: Sign In with ChatGPT” and select that account.`);
+      } catch (error) {
+        await vscode.window.showErrorMessage(error instanceof Error ? error.message : 'Could not add the account.');
+      }
+    }),
     vscode.commands.registerCommand('codexvs.cancelSignIn', async () => {
-      if (!activeLoginId) {
+      const login = activeLogin;
+      if (!login?.id) {
         await vscode.window.showInformationMessage('No ChatGPT sign-in is in progress.');
         return;
       }
-      await backend.cancelLogin(activeLoginId);
-      activeLoginId = undefined;
+      await login.target.cancelLogin(login.id);
     }),
     vscode.commands.registerCommand('codexvs.showAccountStatus', async () => {
       try {
-        const account = await backend.readAccount(false);
+        const selected = await chooseAccount('Select the Codex account to inspect');
+        if (!selected) return;
+        const account = await selected.target.readAccount(false);
         await vscode.window.showInformationMessage(account
-          ? `Codex is signed in with ChatGPT (${account.planType}).`
-          : 'Codex is not signed in with ChatGPT.');
+          ? `CodexVS: ${selected.label} is signed in with ChatGPT (${account.planType}).`
+          : `CodexVS: ${selected.label} is not signed in with ChatGPT.`);
       } catch (error) {
         await vscode.window.showErrorMessage(error instanceof Error ? error.message : 'Could not read Codex account status.');
       }
     }),
     vscode.commands.registerCommand('codexvs.signOut', async () => {
+      const selected = await chooseAccount('Select the Codex account to sign out');
+      if (!selected) return;
       const confirmation = await vscode.window.showWarningMessage(
-        'Signing out removes only the private ChatGPT login used by CodexVS. It does not sign out Codex CLI or other Codex clients on this host.',
+        `Signing out removes only the private ChatGPT login for “${selected.label}”. Other Codex clients and accounts are unaffected.`,
         { modal: true },
         'Sign Out of Codex'
       );
       if (confirmation !== 'Sign Out of Codex') {
         return;
       }
-      await backend.logout();
-      accountUsageStatusBar.clear();
+      await selected.target.logout();
+      if (selected.target === backend) accountUsageStatusBar.clear();
+      provider.refreshAccounts();
       await vscode.window.showInformationMessage('Signed out of the private CodexVS ChatGPT account.');
     }),
     vscode.commands.registerCommand('codexvs.checkRuntime', checkRuntime),
@@ -208,6 +243,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('codexvs.manage', async () => {
       const actions = new Map<string, string>([
+        ['Add Codex Account', 'codexvs.addAccount'],
         ['Sign in with ChatGPT', 'codexvs.signInWithChatGPT'],
         ['Sign in with Device Code', 'codexvs.signInWithDeviceCode'],
         ['Cancel Sign-in', 'codexvs.cancelSignIn'],

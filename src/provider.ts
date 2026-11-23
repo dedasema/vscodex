@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { findAccountModel, parseAccountRoute, qualifyAccountModel, type NamedAccount } from './accountRouting';
 import { MINIMUM_CODEX_CLI_VERSION } from './appServer/runtime';
 import type {
   BackendUsage,
@@ -67,16 +68,23 @@ export interface ProviderIntegrationAdvisor {
   onModelSelected(): void;
 }
 
+export interface NamedAccountBackends {
+  list(): readonly NamedAccount[];
+  get(id: string): CodexBackend | undefined;
+}
+
 export class CodexVSProvider implements vscode.LanguageModelChatProvider {
   readonly onDidChangeLanguageModelChatInformation: vscode.Event<void>;
   private readonly modelInfoChangedEmitter = new vscode.EventEmitter<void>();
   private readonly disposables: vscode.Disposable[] = [];
+  private readonly observedNamedBackends = new Set<CodexBackend>();
 
   constructor(
     private readonly outputChannel: vscode.LogOutputChannel,
     private readonly backend: CodexBackend,
     private readonly selectedModelSink?: SelectedModelSink,
-    private readonly integrationAdvisor?: ProviderIntegrationAdvisor
+    private readonly integrationAdvisor?: ProviderIntegrationAdvisor,
+    private readonly namedAccounts?: NamedAccountBackends
   ) {
     this.onDidChangeLanguageModelChatInformation = this.modelInfoChangedEmitter.event;
     this.disposables.push(
@@ -97,7 +105,7 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
   ): Promise<vscode.LanguageModelChatInformation[]> {
     const startedAt = Date.now();
     try {
-      let models = await this.discoverModels(token);
+      let models = await this.discoverAvailableModels(token);
       if (models.length === 0 && !options.silent) {
         const account = await this.backend.readAccount(false);
         if (!account) {
@@ -105,7 +113,7 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
             'Sign in with ChatGPT to use Codex models in VS Code.'
           );
           if (didSignIn) {
-            models = await this.discoverModels(token);
+            models = await this.discoverAvailableModels(token);
           }
         }
       }
@@ -157,20 +165,34 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
     token: vscode.CancellationToken
   ): Promise<void> {
     const startedAt = Date.now();
+    let backend = this.backend;
     try {
       const config = getProviderConfig();
-      const availableModels = await this.discoverModels(token);
+      const route = parseAccountRoute(model.id);
+      const accountProfile = route.kind === 'named'
+        ? this.namedAccounts?.list().find((account) => account.id === route.accountId)
+        : undefined;
+      if (route.kind !== 'legacy') {
+        const namedBackend = accountProfile && this.getNamedBackend(accountProfile.id);
+        if (!namedBackend) {
+          throw vscode.LanguageModelError.NotFound('The selected Codex account is no longer available.');
+        }
+        backend = namedBackend;
+      }
+      const availableModels = await this.discoverModels(token, backend, config);
       if (availableModels.length === 0) {
-        const account = await this.backend.readAccount(false);
+        const account = await backend.readAccount(false);
         if (!account) {
           throw vscode.LanguageModelError.NoPermissions('Sign in with ChatGPT to use Codex.');
         }
       }
-      const selected = resolveProviderModel(model.id, config, availableModels);
+      const selected = accountProfile
+        ? findAccountModel(model.id, availableModels.map((entry) => qualifyAccountModel(entry, accountProfile)))
+        : resolveProviderModel(model.id, config, availableModels);
       if (!selected) {
         throw vscode.LanguageModelError.NotFound('The selected Codex model is no longer available.');
       }
-      this.selectedModelSink?.setSelectedModel(selected.requestModel);
+      if (!accountProfile) this.selectedModelSink?.setSelectedModel(selected.requestModel);
       this.integrationAdvisor?.onModelSelected();
 
       const reasoning = resolveReasoningRequest(
@@ -193,12 +215,12 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
       const currentInput = currentMessage ? convertMessageToUserInput(currentMessage) : [];
       const toolResults = currentMessage
         ? currentMessage.content
-            .filter((part): part is vscode.LanguageModelToolResultPart => part instanceof vscode.LanguageModelToolResultPart)
-            .map((part) => ({ callId: part.callId, content: part.content }))
+          .filter((part): part is vscode.LanguageModelToolResultPart => part instanceof vscode.LanguageModelToolResultPart)
+          .map((part) => ({ callId: part.callId, content: part.content }))
         : [];
       let usageReported = false;
 
-      await this.backend.runChat({
+      await backend.runChat({
         model: selected.requestModel,
         requestedMode: reasoning.requestedMode,
         backendEffort: reasoning.backendEffort,
@@ -243,15 +265,15 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
       this.outputChannel.debug('language model turn', {
         status: 'completed',
         durationMs: Date.now() - startedAt,
-        processGeneration: this.backend.processGeneration,
-        runtimeVersion: this.backend.runtimeVersion
+        processGeneration: backend.processGeneration,
+        runtimeVersion: backend.runtimeVersion
       });
     } catch (error) {
       this.outputChannel.debug('language model turn', {
         status: error instanceof Error ? error.name : 'failed',
         durationMs: Date.now() - startedAt,
-        processGeneration: this.backend.processGeneration,
-        runtimeVersion: this.backend.runtimeVersion
+        processGeneration: backend.processGeneration,
+        runtimeVersion: backend.runtimeVersion
       });
       throw mapProviderError(error);
     }
@@ -272,14 +294,47 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
     vscode.Disposable.from(...this.disposables).dispose();
   }
 
-  private async discoverModels(token: vscode.CancellationToken): Promise<ResolvedProviderModel[]> {
+  refreshAccounts(): void {
+    this.modelInfoChangedEmitter.fire();
+  }
+
+  private getNamedBackend(id: string): CodexBackend | undefined {
+    const backend = this.namedAccounts?.get(id);
+    if (backend && !this.observedNamedBackends.has(backend)) {
+      this.observedNamedBackends.add(backend);
+      this.disposables.push(
+        backend.onDidChangeAccount(() => this.refreshAccounts()),
+        backend.onDidChangeModels(() => this.refreshAccounts())
+      );
+    }
+    return backend;
+  }
+
+  private async discoverAvailableModels(token: vscode.CancellationToken): Promise<ResolvedProviderModel[]> {
+    const accounts = this.namedAccounts?.list() ?? [];
     const config = getProviderConfig();
-    const models = await this.backend.listModels(token);
-    return buildProviderModels(
-      config,
-      models,
-      this.backend.runtimeVersion ?? MINIMUM_CODEX_CLI_VERSION
-    );
+    if (accounts.length === 0) return this.discoverModels(token, this.backend, config);
+    const [legacy, ...named] = await Promise.allSettled([
+      this.discoverModels(token, this.backend, config),
+      ...accounts.map(async (account) => {
+        const backend = this.getNamedBackend(account.id);
+        const models = backend ? await this.discoverModels(token, backend, config) : [];
+        return models.map((model) => qualifyAccountModel(model, account));
+      })
+    ]);
+    if (token.isCancellationRequested) throw new vscode.CancellationError();
+    const namedModels = named.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
+    if (legacy.status === 'rejected' && namedModels.length === 0) throw legacy.reason;
+    return [...(legacy.status === 'fulfilled' ? legacy.value : []), ...namedModels];
+  }
+
+  private async discoverModels(
+    token: vscode.CancellationToken,
+    backend: CodexBackend,
+    config: ProviderConfig
+  ): Promise<ResolvedProviderModel[]> {
+    const models = await backend.listModels(token);
+    return buildProviderModels(config, models, backend.runtimeVersion ?? MINIMUM_CODEX_CLI_VERSION);
   }
 }
 
