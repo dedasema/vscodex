@@ -132,7 +132,11 @@ export class PassivePolicyViolationError extends Error {
     readonly methodOrItemType: string,
     readonly invariant?: string
   ) {
-    super('Codex app-server attempted an operation forbidden by passive provider policy.');
+    super(
+      `Codex app-server attempted an operation forbidden by passive provider policy. ` +
+      `Method/item: ${methodOrItemType}` +
+      (invariant ? ` | Invariant: ${invariant}` : '')
+    );
     this.name = 'PassivePolicyViolationError';
   }
 }

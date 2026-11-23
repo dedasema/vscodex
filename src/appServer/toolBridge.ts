@@ -507,7 +507,11 @@ export function createDynamicToolCatalog(
       `VS Code caller tool '${definition.name}'. VS Code executes this tool under caller-controlled permissions.`,
       callerDescription
     ].filter(Boolean).join(' ');
-    const alias = createDynamicToolAlias(definition.name, description, inputSchema);
+    const alias = createDynamicToolAlias(
+      definition.name,
+      description,
+      inputSchema
+    );
     if (byAlias.has(alias)) {
       throw new Error('Dynamic tool aliases collided after canonicalization.');
     }

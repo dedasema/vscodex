@@ -90,6 +90,12 @@ void (async () => {
       true
     );
     assert.equal(spawned[0].command, 'codex.cmd');
+    assert.equal(
+      processModule.APP_SERVER_ARGUMENTS.some((value, index, arguments_) =>
+        value === '--disable' && arguments_[index + 1] === 'code_mode_host'),
+      false,
+      'process argv must not disable code_mode_host'
+    );
     assert.deepEqual(
       spawned[0].args,
       processModule.buildAppServerArguments(['-c', expectedMcpDisable])
@@ -99,12 +105,6 @@ void (async () => {
       'global config overrides must precede the app-server subcommand on CLI 0.144.4'
     );
     assert.equal(spawned[0].args.includes('--analytics-default-enabled'), false);
-    assert.equal(
-      spawned[0].args.some((value, index, args) =>
-        value === '--disable' && args[index + 1] === 'code_mode_host'),
-      false,
-      'process argv must not disable code_mode_host'
-    );
     assert.equal(spawned[0].options.shell, false);
     assert.equal(
       spawned[0].options.env.CODEX_HOME,
@@ -179,6 +179,17 @@ void (async () => {
     assert.equal(spawned.length, 2);
     assert.equal(manager.generation, 3);
     assert.equal(manager.state, 'ready');
+    assert.equal(
+      spawned[1].options.env.CODEX_HOME,
+      expectedCodexHome,
+      'fresh app-server children must reuse the extension-controlled private home'
+    );
+    assert.notEqual(
+      spawned[1].options.cwd,
+      spawned[0].options.cwd,
+      'fresh app-server children must receive a new disposable cwd'
+    );
+    assert.deepEqual(await readdir(spawned[1].options.cwd), []);
 
     await manager.shutdown();
     assert.equal(manager.state, 'idle');
