@@ -2,7 +2,7 @@ import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'n
 import { StringDecoder } from 'node:string_decoder';
 
 export const MINIMUM_CODEX_CLI_VERSION = '0.144.4';
-export const LATEST_VALIDATED_CODEX_CLI_VERSION = '0.144.4';
+export const LATEST_VALIDATED_CODEX_CLI_VERSION = '0.171.0';
 export const DEFAULT_CODEX_COMMAND = 'codex';
 export const CODEX_INSTALL_COMMAND = 'npm install -g @openai/codex@latest';
 export const RUNTIME_CHECK_TIMEOUT_MS = 10_000;

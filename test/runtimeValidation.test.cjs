@@ -85,8 +85,13 @@ void (async () => {
     }), {
       command: 'codex',
       version: '0.145.0',
-      newerThanValidated: true
+      newerThanValidated: false
     });
+    for (const [version, newerThanValidated] of [['0.171.0', false], ['0.171.1', true]]) {
+      assert.deepEqual(await runtime.validateCodexRuntime('codex', {
+        spawn: () => createVersionChild(`codex-cli ${version}\n`, 0)
+      }), { command: 'codex', version, newerThanValidated });
+    }
 
     await assert.rejects(
       runtime.validateCodexRuntime('missing-codex', {
