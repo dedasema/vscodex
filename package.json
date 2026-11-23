@@ -1,20 +1,20 @@
 {
   "name": "codexvs",
   "displayName": "CodexVS",
-  "description": "Use Codex models in VS Code and GitHub Copilot through the official Codex app-server and your shared ChatGPT login.",
+  "description": "Use Codex models in VS Code and GitHub Copilot through the official Codex app-server and a private CodexVS ChatGPT sign-in.",
   "icon": "assets/vscodex.png",
   "version": "0.2.1",
-  "publisher": "merceralex397-collab",
-  "author": "merceralex397-collab",
+  "publisher": "dedasema",
+  "author": "dedasema",
   "license": "MIT",
   "private": true,
-  "homepage": "https://github.com/merceralex397-collab/vscodex#readme",
+  "homepage": "https://github.com/dedasema/vscodex#readme",
   "bugs": {
-    "url": "https://github.com/merceralex397-collab/vscodex/issues"
+    "url": "https://github.com/dedasema/vscodex/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/merceralex397-collab/vscodex.git"
+    "url": "https://github.com/dedasema/vscodex.git"
   },
   "keywords": [
     "codex",

@@ -3,7 +3,9 @@
 .vscode/**
 .vscode-test/**
 .gitignore
+.atl/**
 .tmp-vsix/**
+odd/**
 **/AGENTS.md
 docs/**
 scripts/**

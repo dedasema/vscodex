@@ -40,7 +40,7 @@ The expected artifact is `codexvs-0.2.1-pre-release.vsix`. Package inspection ch
 
 ## Release
 
-The clean repository begins with one root commit on `main`. The pre-release tag is `v0.2.1-pre`. The release workflow validates the minimum and latest Codex CLI, builds the VSIX, generates its SHA-256 checksum, and creates the GitHub pre-release. Upload that exact verified VSIX manually to the Marketplace publisher `merceralex397-collab`; no Marketplace credential is stored in GitHub.
+The clean repository begins with one root commit on `main`. The pre-release tag is `v0.2.1-pre`. The release workflow validates the minimum and latest Codex CLI, builds the VSIX, generates its SHA-256 checksum, and creates the GitHub pre-release. After creating and controlling the Marketplace publisher `dedasema`, upload that exact verified VSIX manually; no Marketplace credential is stored in GitHub.
 
 Before tagging, validate a fresh isolated-profile install, local and remote login paths, model discovery, streaming, one VS Code-owned tool loop, cancellation, concurrency, account limits, crash recovery, and configured-MCP isolation.
 

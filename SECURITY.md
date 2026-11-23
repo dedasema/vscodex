@@ -6,7 +6,7 @@ Security fixes are provided for the latest Marketplace pre-release.
 
 ## Reporting a vulnerability
 
-Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/merceralex397-collab/vscodex/security/advisories/new). Do not open a public issue for a suspected vulnerability.
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/dedasema/vscodex/security/advisories/new). Do not open a public issue for a suspected vulnerability.
 
 Do not include ChatGPT credentials, API keys, access tokens, authentication URLs, MCP headers, prompts, tool arguments/results, email addresses, or private filesystem paths in reports. A minimal reproduction using the fake app-server is preferred.
 

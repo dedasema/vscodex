@@ -1,6 +1,6 @@
 # Support
 
-Use [GitHub Issues](https://github.com/merceralex397-collab/vscodex/issues) for reproducible bugs and focused feature requests.
+Use [GitHub Issues](https://github.com/dedasema/vscodex/issues) for reproducible bugs and focused feature requests.
 
 Before filing:
 
@@ -11,4 +11,4 @@ Before filing:
 
 General Codex CLI, ChatGPT account, GitHub Copilot, and VS Code product-support questions should be reported to the product that owns that surface.
 
-Suspected vulnerabilities must be reported privately through [GitHub Security Advisories](https://github.com/merceralex397-collab/vscodex/security/advisories/new).
+Suspected vulnerabilities must be reported privately through [GitHub Security Advisories](https://github.com/dedasema/vscodex/security/advisories/new).

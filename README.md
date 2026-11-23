@@ -1,6 +1,6 @@
 # CodexVS
 
-[![CI](https://github.com/merceralex397-collab/vscodex/actions/workflows/ci.yml/badge.svg)](https://github.com/merceralex397-collab/vscodex/actions/workflows/ci.yml)
+[![CI](https://github.com/dedasema/vscodex/actions/workflows/ci.yml/badge.svg)](https://github.com/dedasema/vscodex/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 CodexVS is a native VS Code `LanguageModelChatProvider` backed by the official Codex app-server. It lets VS Code and GitHub Copilot use a private CodexVS ChatGPT sign-in for model discovery, reasoning, streaming responses, conversation state, and account limits.
@@ -24,7 +24,7 @@ Remote SSH, WSL, and dev-container extension hosts need their own Codex CLI inst
 
 ## Installation
 
-Install the pre-release from the VS Code Marketplace once it is published, or download the VSIX and matching SHA-256 file from the [v0.2.1 pre-release](https://github.com/merceralex397-collab/vscodex/releases/tag/v0.2.1-pre).
+Install the pre-release from the VS Code Marketplace once it is published, or download the VSIX and matching SHA-256 file from the [v0.2.1 pre-release](https://github.com/dedasema/vscodex/releases/tag/v0.2.1-pre).
 
 ```powershell
 code --install-extension codexvs-0.2.1-pre-release.vsix --force
@@ -42,12 +42,13 @@ npm run compile
 Open this folder in VS Code, press `F5`, and select **Run CodexVS Extension**. In the Extension Development Host:
 
 1. Open Chat and select a model supplied by `CodexVS`.
-2. Run **Codex: Sign in with ChatGPT** if prompted.
+2. On first run, choose **Codex: Sign in with ChatGPT** to sign in through CodexVS.
 3. Use **Codex: Sign in with Device Code** when browser login cannot return to the extension host.
-4. Run **Codex: Check App-server Runtime** for executable, version, or MCP-isolation diagnostics.
-5. Choose **Thinking Effort** beside the model picker, or run **Codex: Configure Reasoning Effort** for the global fallback.
-6. Run **Codex: Configure VS Code Utility Models** and choose a general and a small model.
-7. Run **Codex: Show Integration Diagnostics** to verify the runtime, discovered models, registered VS Code tools, utility settings, and workspace trust.
+4. After restarting the extension host or app-server, run **Codex: Show Account Status** to check the private CodexVS account.
+5. Run **Codex: Check App-server Runtime** for executable, version, or MCP-isolation diagnostics.
+6. Choose **Thinking Effort** beside the model picker, or run **Codex: Configure Reasoning Effort** for the global fallback.
+7. Run **Codex: Configure VS Code Utility Models** and choose a general and a small model.
+8. Run **Codex: Show Integration Diagnostics** to verify the runtime, discovered models, registered VS Code tools, utility settings, and workspace trust.
 
 To install the packaged pre-release:
 
@@ -64,9 +65,11 @@ code --user-data-dir .tmp/vscode-profile --extensions-dir .tmp/vscode-extensions
 
 ## Authentication
 
-Codex app-server owns ChatGPT authentication. CodexVS supplies a persistent private `CODEX_HOME`. On first run, sign in with **Codex: Sign in with ChatGPT** or **Codex: Sign in with Device Code**. The extension never reads or logs credential files or tokens, and removes API-key/access-token environment variables from the passive child process.
+Codex app-server owns ChatGPT authentication. CodexVS gives it an extension-controlled persistent private `CODEX_HOME`; on first run, sign in through **Codex: Sign in with ChatGPT** (or **Codex: Sign in with Device Code**). On a later extension-host or app-server restart, use **Codex: Show Account Status** to check the account through the official token-free RPC.
 
-Signing out requires confirmation and affects only the private CodexVS login, not the standalone Codex CLI.
+CodexVS never reads, copies, or logs credential files or tokens. It does not use global `~/.codex` configuration or instructions, and it removes API-key/access-token environment variables from the passive child process. The extension reuses its private home for fresh app-server children, but real authenticated CLI validation is still required to prove login persistence for a particular Codex CLI release.
+
+Signing out removes only the private CodexVS login and therefore requires confirmation; it does not sign out Codex CLI or other Codex clients on the host.
 
 ## MCP and tools
 
@@ -118,7 +121,7 @@ Every model request records a privacy-safe request shape in the CodexVS output: 
 
 - **Codex: Open Debug Logs** opens the `CodexVS` log output. Lifecycle records include runtime version, RPC method, duration, generation, and app-server stderr byte/line counts only.
 - Run **Developer: Open Logs Folder** for VS Code and GitHub Copilot Chat logs. Copilot-side utility-model, tool-schema, and context-ingestion failures appear there rather than in app-server output.
-- CodexVS uses an extension-controlled private `CODEX_HOME`, not global `%USERPROFILE%\.codex`. Codex CLI 0.144.4 maintains bounded diagnostic data in files such as `logs_2.sqlite`; the app-server itself writes diagnostics to stderr. These stores can contain prompts and tool data, are private, and are not a stable integration API. CodexVS never reads or packages them.
+- CodexVS uses an extension-controlled private `CODEX_HOME`, not global `%USERPROFILE%\.codex`. Codex CLI 0.144.4 can maintain bounded diagnostic data in files such as `logs_2.sqlite`; the app-server itself writes diagnostics to stderr. These stores can contain prompts and tool data, are private, and are not a stable integration API. CodexVS never reads or packages them.
 - The repository ignores `logs/`, `*.log`, and packaged log paths so captured private diagnostics cannot enter source control or a VSIX by accident.
 
 The app-server remains the right official integration surface: it supplies ChatGPT authentication, model discovery, threads, turns, streaming, usage, and caller-executed dynamic tools without adding a private HTTP transport. See the official [Codex app-server documentation](https://developers.openai.com/codex/app-server/).
@@ -161,10 +164,8 @@ The real-account suite is opt-in and uses its own login, not the global Codex CL
 
 ## Ownership and licensing
 
-Copyright © 2026 merceralex397-collab.
+See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for source and bundled dependency notices.
 
-CodexVS is released under the [MIT License](LICENSE). Bundled third-party software remains under its own terms; required notices are shipped in `THIRD_PARTY_NOTICES.md`.
-
-Questions and reproducible bug reports belong in [GitHub Issues](https://github.com/merceralex397-collab/vscodex/issues). Please read [Support](SUPPORT.md), [Contributing](CONTRIBUTING.md), and [Security](SECURITY.md) before filing.
+Questions and reproducible bug reports belong in [GitHub Issues](https://github.com/dedasema/vscodex/issues). Please read [Support](SUPPORT.md), [Contributing](CONTRIBUTING.md), and [Security](SECURITY.md) before filing.
 
 See [Architecture](docs/ARCHITECTURE.md) and [Development](docs/DEVELOPMENT.md) for implementation details.

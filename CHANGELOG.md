@@ -26,7 +26,7 @@
 
 ### Release hygiene
 
-- Established the Marketplace identity as `merceralex397-collab.codexvs`.
+- Established the Marketplace identity as `dedasema.codexvs`.
 - Released the source under the MIT License and added public contribution guidance.
 - Restricted the VSIX to its runtime bundle, manifest, icon, documentation, license, and bundled dependency notices.
 - Added checksum publication and kept Marketplace upload as an explicit manual release step.
