@@ -80,16 +80,15 @@ export function buildCodexAccountUsageDisplay(
   selectedModel: string,
   now = Date.now()
 ): AccountUsageDisplay {
-  const fiveHour = selectPreferredLimit(snapshot.limits, '5h', selectedModel);
-  const weekly = selectPreferredLimit(snapshot.limits, 'weekly', selectedModel);
+  const { fiveHour, weekly } = selectPrimaryLimits(snapshot.limits, selectedModel);
   const compactParts: string[] = [];
 
   if (fiveHour) {
-    compactParts.push(`5h ${formatPercent(fiveHour.remainingPercent)}`);
+    compactParts.push(`5h ${formatPercent(fiveHour.remainingPercent)} left`);
   }
 
   if (weekly) {
-    compactParts.push(`weekly ${formatPercent(weekly.remainingPercent)}`);
+    compactParts.push(`wk ${formatPercent(weekly.remainingPercent)} left`);
   }
 
   if (snapshot.creditsBalance !== undefined && (compactParts.length > 0 || (!fiveHour && !weekly))) {
@@ -469,7 +468,7 @@ function formatLimitDetail(limit: RateLimitSnapshot): string {
     `${formatPercent(limit.usedPercent)} used`
   ];
 
-  if (limit.resetAt) {
+  if (limit.resetAt !== undefined) {
     parts.push(`resets ${new Date(limit.resetAt).toLocaleString()}`);
   }
 

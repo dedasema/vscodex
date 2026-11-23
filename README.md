@@ -71,6 +71,12 @@ CodexVS never reads, copies, or logs credential files or tokens. It does not use
 
 Signing out removes only the private CodexVS login and therefore requires confirmation; it does not sign out Codex CLI or other Codex clients on the host.
 
+## Account limits
+
+Open **Codex: Show Account Limits** from the Command Palette or click the Codex account-limits status item. The command opens or reuses a themed dashboard beside the editor and refreshes its data; use **Refresh** inside the dashboard to request another update.
+
+The dashboard shows only returned quota windows, remaining percentages, reset times, and known plan/credit information—not token balances inferred from percentages. Loading, empty, older-data, and refresh-failure states distinguish unavailable data from current limits. Cached limits may remain visible after a refresh failure; account changes clear them immediately. The compact status item follows the selected model and is hidden when no limits are available.
+
 ## MCP and tools
 
 Codex CLI clients share MCP configuration. CodexVS does not modify that global configuration and does not make those servers available to Copilot. Before starting its passive app-server child it:

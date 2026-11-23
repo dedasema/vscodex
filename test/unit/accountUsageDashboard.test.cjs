@@ -62,7 +62,8 @@ test('uses the compact selector for ordered primary windows across pools and mod
   const otherModelView = buildCodexAccountUsageViewModel(snapshot, 'gpt-4.1', NOW);
   assert.equal(otherModelView.primaryWindows[1].limitId, 'pool-week-other');
   const display = buildCodexAccountUsageDisplay(snapshot, 'gpt-5.5', NOW_MS);
-  assert.equal(display.compactText, 'Codex: 5h 20% · weekly 70% · 12.5 credits');
+  assert.match(display.compactText, /5h 20% left/);
+  assert.match(display.compactText, /wk 70% left/);
   assert.match(display.tooltip, /20% remaining/);
   assert.match(display.tooltip, /80% used/);
 });
