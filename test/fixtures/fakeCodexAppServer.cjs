@@ -356,6 +356,22 @@ function startTurn(message) {
     }
   }
 
+  if (/mixed caller tools/i.test(text)) {
+    const createFile = thread?.dynamicTools?.find((tool) =>
+      /VS Code caller tool 'create_file'/.test(tool.description ?? ''));
+    const readFile = thread?.dynamicTools?.find((tool) =>
+      /VS Code caller tool 'workspace\/read_file'/.test(tool.description ?? ''));
+    if (thread?.dynamicTools?.length !== 2
+      || !createFile?.name.startsWith('vscode_')
+      || !readFile?.name.startsWith('vscode_')) {
+      send({ id: message.id, error: { code: -32602, message: 'Mixed caller tools were not preserved with VS Code aliases.' } });
+      return;
+    }
+    respond(message, { turn: turnPayload(turnId, 'inProgress') });
+    setImmediate(() => issueToolRequest(threadId, turnId, 1, 1, false, readFile.name));
+    return;
+  }
+
   if (/(?:use|chain|crash after|invalid) tool/i.test(text) && thread?.dynamicTools?.length) {
     respond(message, { turn: turnPayload(turnId, 'inProgress') });
     const total = /chain tool/i.test(text) ? 2 : 1;
@@ -494,7 +510,8 @@ function issueToolRequest(
 
 function hasPassiveMultiAgentConfig(config) {
   const multiAgentV2 = config?.features?.multi_agent_v2;
-  return config?.features?.multi_agent === false
+  return config?.features?.code_mode_host === false
+    && config?.features?.multi_agent === false
     && multiAgentV2?.enabled === false
     && multiAgentV2?.max_concurrent_threads_per_session === 1
     && multiAgentV2?.usage_hint_text === ''

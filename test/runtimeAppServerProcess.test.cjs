@@ -99,6 +99,12 @@ void (async () => {
       'global config overrides must precede the app-server subcommand on CLI 0.144.4'
     );
     assert.equal(spawned[0].args.includes('--analytics-default-enabled'), false);
+    assert.equal(
+      spawned[0].args.some((value, index, args) =>
+        value === '--disable' && args[index + 1] === 'code_mode_host'),
+      false,
+      'process argv must not disable code_mode_host'
+    );
     assert.equal(spawned[0].options.shell, false);
     assert.equal(
       spawned[0].options.env.CODEX_HOME,

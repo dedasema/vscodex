@@ -46,7 +46,6 @@ export const APP_SERVER_ARGUMENTS = Object.freeze([
   '--disable', 'computer_use',
   '--disable', 'image_generation',
   '--disable', 'in_app_browser',
-  '--disable', 'code_mode_host',
   '--disable', 'multi_agent',
   '--disable', 'multi_agent_v2',
   '--disable', 'plugins',

@@ -133,7 +133,11 @@ try {
   const plainSink = createSink();
   const plainRequest = requestForText('hello app-server');
   const plainResult = await backend.runChat(plainRequest, plainSink, neverCancelled.token);
-  assert.equal(plainResult.kind, 'completed');
+  assert.equal(
+    plainResult.kind,
+    'completed',
+    'The fixture accepts the per-thread code_mode_host: false containment config.'
+  );
   assert.equal(plainSink.textValue, 'Echo: hello app-server');
   assert.equal(plainSink.usageValues.length, 1);
 
@@ -325,6 +329,36 @@ try {
   assert.equal(coldSink.textValue, 'Echo: cold envelope');
   assert.equal(countRpcMethod(logs, 'thread/start'), startsBeforeCold + 1);
   assert.equal(countRpcMethod(logs, 'thread/inject_items'), injectsBeforeCold + 1);
+
+  const mixedToolSink = createSink();
+  const mixedToolRequest = requestForText('mixed caller tools', [{
+    name: 'create_file',
+    description: 'Create a workspace file.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: { type: 'string' } },
+      required: ['path']
+    }
+  }, {
+    name: 'workspace/read_file',
+    description: 'Read a workspace file.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: { type: 'string' } },
+      required: ['path']
+    }
+  }]);
+  const mixedToolBoundary = await backend.runChat(
+    mixedToolRequest,
+    mixedToolSink,
+    neverCancelled.token
+  );
+  assert.equal(mixedToolBoundary.kind, 'toolBoundary');
+  assert.equal(
+    mixedToolSink.toolCalls[0].name,
+    'workspace/read_file',
+    'Mixed caller tools reach the bridge without create_file filtering.'
+  );
 
   const toolSink = createSink();
   const toolRequest = requestForText('please use tool', [{
