@@ -16,10 +16,14 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
   private webviewReady = false;
   private webviewGeneration = 0;
   private disposed = false;
+  private accountLabel?: string;
+  private refreshGeneration = 0;
+  private choosingAccount = false;
 
   constructor(
     private readonly onRefresh: () => void | Promise<void>,
-    private readonly clock: () => number = () => Date.now()
+    private readonly clock: () => number = () => Date.now(),
+    private readonly chooseAccount?: () => void | Promise<void>
   ) {}
 
   update(model: CodexAccountUsageViewModel | undefined, state: AccountUsagePanelState): void {
@@ -27,6 +31,12 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
     this.model = model;
     this.state = state;
     this.publishState();
+  }
+
+  setAccount(label: string): void {
+    this.accountLabel = label;
+    this.refreshGeneration += 1;
+    this.refreshInFlight = false;
   }
 
   show(): void {
@@ -52,7 +62,7 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
     ];
     panel.webview.html = renderAccountUsagePanelHtml(
       randomBytes(16).toString('base64'), this.model, this.state,
-      this.refreshInFlight, this.clock()
+      this.refreshInFlight, this.clock(), this.accountLabel, Boolean(this.chooseAccount)
     );
   }
 
@@ -75,25 +85,36 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
       this.publishState(panel);
       return;
     }
+    if (kind === 'selectAccount' && this.chooseAccount && !this.choosingAccount) {
+      this.choosingAccount = true;
+      try { await this.chooseAccount(); } catch { /* Keep the current view on chooser failure. */ }
+      finally { this.choosingAccount = false; }
+      return;
+    }
     if (kind !== 'refresh' || this.refreshInFlight) return;
+    const refreshGeneration = this.refreshGeneration;
 
     this.refreshInFlight = true;
     this.state = 'loading';
     this.publishState(panel);
     try {
       await this.onRefresh();
-      if (this.state === 'loading') {
+      if (refreshGeneration === this.refreshGeneration && this.state === 'loading') {
         this.state = this.model
           ? this.model.isStale || this.model.freshness === 'stale' ? 'stale' : 'ready'
           : 'empty';
         this.publishState();
       }
     } catch {
-      this.state = 'refresh-failed';
-      this.publishState();
+      if (refreshGeneration === this.refreshGeneration) {
+        this.state = 'refresh-failed';
+        this.publishState();
+      }
     } finally {
-      this.refreshInFlight = false;
-      this.publishState();
+      if (refreshGeneration === this.refreshGeneration) {
+        this.refreshInFlight = false;
+        this.publishState();
+      }
     }
   }
 
@@ -108,7 +129,7 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
     if (!panel || panel !== this.panel || !this.webviewReady) return;
     this.post(panel, {
       type: 'render',
-      html: renderAccountUsageDashboardHtml(this.model, this.state, this.clock())
+      html: renderAccountUsageDashboardHtml(this.model, this.state, this.clock(), this.accountLabel)
     });
     this.post(panel, { type: 'busy', busy: this.refreshInFlight });
   }
@@ -142,10 +163,10 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
 
 type WebviewMessage = { type: 'render'; html: string } | { type: 'busy'; busy: boolean };
 
-function getMessageKind(message: unknown): 'ready' | 'refresh' | undefined {
+function getMessageKind(message: unknown): 'ready' | 'refresh' | 'selectAccount' | undefined {
   if (typeof message !== 'object' || message === null || Array.isArray(message)) return undefined;
   const keys = Reflect.ownKeys(message);
   if (keys.length !== 1 || keys[0] !== 'type') return undefined;
   const type = (message as { type?: unknown }).type;
-  return type === 'ready' || type === 'refresh' ? type : undefined;
+  return type === 'ready' || type === 'refresh' || type === 'selectAccount' ? type : undefined;
 }

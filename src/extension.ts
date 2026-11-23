@@ -22,7 +22,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const backend = new CodexAppServerBackend(context, outputChannel);
   const namedAccounts = new NamedAccountRegistry(context.globalState,
     (id) => new CodexAppServerBackend(context, outputChannel, id));
-  const accountUsageStatusBar = new CodexAccountUsageStatusBar(outputChannel, backend);
+  const accountUsageStatusBar = new CodexAccountUsageStatusBar(
+    outputChannel, backend, () => chooseAccount('Select the account shown in Codex limits')
+  );
   const integrationAdvisor = new VsCodeIntegrationAdvisor(outputChannel);
   const provider = new CodexVSProvider(
     outputChannel,
@@ -96,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       });
       await vscode.window.showInformationMessage(`Signed in to ChatGPT (${account.planType}).`);
       provider.refreshAccounts();
-      if (target === backend) await accountUsageStatusBar.refresh().catch(() => {});
+      if (accountUsageStatusBar.isShowing(target)) await accountUsageStatusBar.refresh().catch(() => {});
     } catch (error) {
       if (error instanceof vscode.CancellationError
         || (error instanceof Error && error.name === 'LoginCancelledError')) {
@@ -204,7 +206,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
       await selected.target.logout();
-      if (selected.target === backend) accountUsageStatusBar.clear();
+      if (accountUsageStatusBar.isShowing(selected.target)) accountUsageStatusBar.clear();
       provider.refreshAccounts();
       await vscode.window.showInformationMessage('Signed out of the private CodexVS ChatGPT account.');
     }),

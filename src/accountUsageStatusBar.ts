@@ -32,12 +32,26 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
   private disposed = false;
   private failed = false;
   private selectedModel = getProviderConfig().model;
+  private usageSource: AccountUsageSource;
+  private sourceSubscriptions: vscode.Disposable[] = [];
+  private accountLabel?: string;
+  private sourceGeneration = 0;
 
   constructor(
     private readonly outputChannel: vscode.LogOutputChannel,
-    private readonly usageSource: AccountUsageSource
+    private readonly defaultSource: AccountUsageSource,
+    selectAccount?: () => Promise<{ target: AccountUsageSource; label: string } | undefined>
   ) {
-    this.dashboard = new CodexAccountUsagePanel(() => this.refreshDashboard());
+    this.usageSource = defaultSource;
+    this.dashboard = new CodexAccountUsagePanel(() => this.refreshDashboard(), undefined,
+      selectAccount ? async () => {
+        const selection = await selectAccount();
+        if (selection && !this.disposed) await this.setUsageSource(selection.target, selection.label);
+      } : undefined);
+    if (selectAccount) {
+      this.accountLabel = 'Default account';
+      this.dashboard.setAccount(this.accountLabel);
+    }
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
     this.statusBarItem.name = 'Codex Account Limits';
     this.statusBarItem.command = 'codexvs.refreshAccountLimits';
@@ -49,17 +63,10 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
       }
     }, REFRESH_INTERVAL_MS);
 
-    const rateLimitSubscription = this.usageSource.onDidUpdateRateLimits((snapshot) => {
-      if (!this.disposed) {
-        this.acceptSnapshot(snapshot);
-      }
-    });
-    const accountSubscription = this.usageSource.onDidChangeAccount?.(() => this.clear());
+    this.subscribeToSource();
     this.disposables = [
       this.dashboard,
       this.statusBarItem,
-      rateLimitSubscription,
-      ...(accountSubscription ? [accountSubscription] : []),
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('codexvs.model')) {
           this.setSelectedModel(getProviderConfig().model);
@@ -74,6 +81,36 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
     }
     this.selectedModel = model;
     this.render();
+  }
+
+  isShowing(source: AccountUsageSource): boolean {
+    return source === this.usageSource;
+  }
+
+  async setUsageSource(source: AccountUsageSource, label: string): Promise<void> {
+    if (this.disposed) return;
+    if (source !== this.usageSource) {
+      this.sourceSubscriptions.splice(0).forEach((subscription) => subscription.dispose());
+      this.sourceGeneration += 1;
+      this.usageSource = source;
+      this.accountLabel = label;
+      this.dashboard.setAccount(label);
+      this.clear();
+      this.subscribeToSource();
+    }
+    await this.refresh().catch(() => {});
+  }
+
+  private subscribeToSource(): void {
+    const source = this.usageSource;
+    const generation = this.sourceGeneration;
+    this.sourceSubscriptions.push(source.onDidUpdateRateLimits((snapshot) => {
+      if (!this.disposed && generation === this.sourceGeneration) this.acceptSnapshot(snapshot);
+    }));
+    const account = source.onDidChangeAccount?.(() => {
+      if (generation === this.sourceGeneration) this.clear();
+    });
+    if (account) this.sourceSubscriptions.push(account);
   }
 
   clear(): void {
@@ -125,6 +162,7 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
     this.lastSnapshot = undefined;
     this.refreshInFlight = undefined;
     clearInterval(this.refreshTimer);
+    this.sourceSubscriptions.splice(0).forEach((subscription) => subscription.dispose());
     vscode.Disposable.from(...this.disposables).dispose();
   }
 
@@ -168,21 +206,22 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
     if (this.disposed) {
       return;
     }
+    const model = this.usageSource === this.defaultSource ? this.selectedModel : getProviderConfig().model;
     const view = buildCodexAccountUsageViewModel(
-      this.lastSnapshot ?? { fetchedAt: Number.NaN, limits: [] }, this.selectedModel, new Date()
+      this.lastSnapshot ?? { fetchedAt: Number.NaN, limits: [] }, model, new Date()
     );
     this.dashboard.update(view, this.failed ? 'refresh-failed'
       : this.refreshInFlight ? 'loading'
         : !view.primaryWindows.length && !view.otherWindows.length ? 'empty'
           : view.isStale ? 'stale' : 'ready');
     const display = this.lastSnapshot
-      ? buildCodexAccountUsageDisplay(this.lastSnapshot, this.selectedModel) : undefined;
+      ? buildCodexAccountUsageDisplay(this.lastSnapshot, model) : undefined;
     if (!display?.compactText) {
       this.statusBarItem.hide();
       return;
     }
-    this.statusBarItem.text = display.compactText;
-    this.statusBarItem.tooltip = display.tooltip;
+    this.statusBarItem.text = this.accountLabel ? `${this.accountLabel.replaceAll('$(', '$ (')} · ${display.compactText}` : display.compactText;
+    this.statusBarItem.tooltip = this.accountLabel ? `Account: ${this.accountLabel} · ${display.tooltip}` : display.tooltip;
     this.statusBarItem.show();
   }
 }

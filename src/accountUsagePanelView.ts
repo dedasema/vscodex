@@ -9,7 +9,9 @@ export function renderAccountUsagePanelHtml(
   model: CodexAccountUsageViewModel | undefined,
   state: AccountUsagePanelState,
   refreshBusy: boolean,
-  now: number
+  now: number,
+  accountLabel?: string,
+  accountSelectable = false
 ): string {
   const safeNonce = escapeHtml(nonce);
   const policy = [
@@ -55,12 +57,13 @@ dd { display: inline; margin: 0; }
 </style>
 </head>
 <body>
-<header><h1>Codex Account Limits</h1><button id="refresh" type="button"${refreshBusy ? ' disabled' : ''}>Refresh</button></header>
-<main id="content" aria-live="polite">${renderAccountUsageDashboardHtml(model, state, now)}</main>
+<header><h1>Codex Account Limits</h1>${accountSelectable ? '<button id="select-account" type="button">Change account</button>' : ''}<button id="refresh" type="button"${refreshBusy ? ' disabled' : ''}>Refresh</button></header>
+<main id="content" aria-live="polite">${renderAccountUsageDashboardHtml(model, state, now, accountLabel)}</main>
 <script nonce="${safeNonce}">
 const vscode = acquireVsCodeApi();
 const content = document.getElementById('content');
 const refresh = document.getElementById('refresh');
+document.getElementById('select-account')?.addEventListener('click', () => vscode.postMessage({ type: 'selectAccount' }));
 let restoreRefreshFocus = false;
 refresh.addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
 window.addEventListener('message', ({ data }) => {
@@ -88,7 +91,8 @@ vscode.postMessage({ type: 'ready' });
 export function renderAccountUsageDashboardHtml(
   model: CodexAccountUsageViewModel | undefined,
   state: AccountUsagePanelState,
-  now: number
+  now: number,
+  accountLabel?: string
 ): string {
   const freshness = getFreshness(model, state, now);
   const status = state === 'loading'
@@ -103,6 +107,7 @@ export function renderAccountUsageDashboardHtml(
             ? 'Account limits are current.'
             : 'Fetch time unknown; freshness cannot be confirmed.';
   const parts = [`<p class="status" role="status">${status}</p>`];
+  if (accountLabel) parts.unshift(`<p>Account: <strong>${escapeHtml(accountLabel)}</strong></p>`);
 
   if (model) {
     parts.push(`<p class="freshness">Data freshness: ${freshness.label} · ${freshness.detail}</p>`);

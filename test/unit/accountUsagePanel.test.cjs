@@ -240,3 +240,64 @@ test('sets loading and disables refresh while busy, then releases it without flo
   await nextTurn();
   instance.dispose();
 });
+
+test('dashboard requests account selection without accepting an ID from the Webview', async () => {
+  const harness = makeHarness();
+  let choices = 0;
+  const instance = new panelApi.CodexAccountUsagePanel(() => {}, undefined, () => { choices++; });
+  instance.setAccount('Work <account>');
+  instance.show();
+  const panel = harness.panels[0];
+  assert.match(panel.webview.html, /Change account/);
+  assert.match(panel.webview.html, /Work &lt;account&gt;/);
+  panel.receive({ type: 'selectAccount', id: 'untrusted' });
+  panel.receive({ type: 'selectAccount' });
+  await nextTurn();
+  assert.equal(choices, 1);
+  instance.dispose();
+});
+
+test('dashboard account switch drops a pending result and an old backend event', async () => {
+  const harness = makeHarness();
+  const item = { show() {}, hide() {}, dispose() {} };
+  const stub = {
+    ...vscodeStub,
+    StatusBarAlignment: { Right: 1 },
+    Disposable: { from: (...values) => ({ dispose: () => values.forEach((value) => value.dispose()) }) },
+    window: { ...vscodeStub.window, createStatusBarItem: () => item },
+    workspace: {
+      getConfiguration: () => ({ get: (_, fallback) => fallback, inspect: () => undefined }),
+      onDidChangeConfiguration: () => ({ dispose() {} })
+    }
+  };
+  let releaseOld;
+  let lateOldEvent;
+  const snapshot = (planType, usedPercent) => ({
+    planType, fetchedAt: Date.now(), limits: [{ windowMinutes: 300, usedPercent, remainingPercent: 100 - usedPercent }]
+  });
+  const oldSource = {
+    readRateLimits: () => new Promise((resolve) => { releaseOld = resolve; }),
+    onDidUpdateRateLimits: (callback) => { lateOldEvent = callback; return { dispose() {} }; }
+  };
+  const workSource = {
+    readRateLimits: async () => snapshot('Work plan', 25),
+    onDidUpdateRateLimits: () => ({ dispose() {} })
+  };
+  const { CodexAccountUsageStatusBar } = loadTypeScript('src/accountUsageStatusBar.ts', stub);
+  const bar = new CodexAccountUsageStatusBar({ warn() {} }, oldSource, async () => ({ target: workSource, label: 'Work' }));
+  try {
+    const original = bar.showDetails();
+    const panel = harness.panels[0];
+    panel.receive({ type: 'ready' });
+    panel.receive({ type: 'selectAccount' });
+    await nextTurn();
+    assert.match(lastRender(panel), /Work plan/);
+    assert.match(item.text, /^Work ·/);
+    lateOldEvent(snapshot('Wrong account event', 99));
+    releaseOld(snapshot('Wrong late response', 98));
+    await original;
+    assert.match(lastRender(panel), /Work plan/);
+    assert.doesNotMatch(lastRender(panel), /Wrong/);
+    assert.match(item.text, /^Work ·/);
+  } finally { bar.dispose(); }
+});
