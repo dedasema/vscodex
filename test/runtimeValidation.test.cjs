@@ -117,8 +117,8 @@ void (async () => {
 
     const mcpSpawns = [];
     const mcpOutputs = [
-      formatMcpList([punctuatedServer]),
-      formatMcpList([{ ...punctuatedServer, enabled: false }])
+      formatMcpList([]),
+      formatMcpList([])
     ];
     const isolation = await runtime.prepareMcpIsolation('codex.cmd', {
       cwd: tempDirectory,
@@ -128,19 +128,11 @@ void (async () => {
         return createVersionChild(mcpOutputs.shift(), 0);
       }
     });
-    assert.deepEqual(isolation.disableArguments, disableArguments);
-    assert.deepEqual(
-      JSON.parse(JSON.stringify(isolation.passiveMcpServers)),
-      {
-        [punctuatedName]: {
-          enabled: false,
-          command: './.codexvs-disabled-mcp'
-        }
-      }
-    );
+    assert.deepEqual(isolation.disableArguments, []);
+    assert.deepEqual(JSON.parse(JSON.stringify(isolation.passiveMcpServers)), {});
     assert.deepEqual(mcpSpawns[0].args, ['mcp', 'list']);
     assert.deepEqual(mcpSpawns[1].args, [
-      '-c', 'mcp_servers={}', ...disableArguments, 'mcp', 'list'
+      '-c', 'mcp_servers={}', 'mcp', 'list'
     ]);
     assert.equal(mcpSpawns.some((entry) => entry.args.includes('--json')), false);
     assert.equal(mcpSpawns.every((entry) => entry.command === 'codex.cmd'), true);
@@ -164,19 +156,18 @@ void (async () => {
       formatMcpList(mixedServers),
       formatMcpList(mixedServers.map((server) => ({ ...server, enabled: false })))
     ];
-    const mixedIsolation = await runtime.prepareMcpIsolation('codex', {
+    await assert.rejects(runtime.prepareMcpIsolation('codex', {
       spawn: () => createVersionChild(mixedOutputs.shift(), 0)
-    });
-    assert.equal(Object.keys(mixedIsolation.passiveMcpServers).length, 2);
+    }), (error) => error.reason === 'configured');
 
     const extendedTable = formatMcpList([{ name: 'future-format', transport: 'stdio', enabled: true }])
       .replace('  Auth\n', '  Auth  Notes\n')
       .replace('  Unsupported\n', '  Unsupported  ignored\n');
     const extendedDisabledTable = extendedTable.replace('enabled ', 'disabled');
     const extendedOutputs = [extendedTable, extendedDisabledTable];
-    await runtime.prepareMcpIsolation('codex', {
+    await assert.rejects(runtime.prepareMcpIsolation('codex', {
       spawn: () => createVersionChild(extendedOutputs.shift(), 0)
-    });
+    }), (error) => error.reason === 'configured');
 
     await assert.rejects(
       runtime.prepareMcpIsolation('codex', {
@@ -215,7 +206,7 @@ void (async () => {
           name: 'configured', transport: 'stdio', enabled: unsafeCall++ > 0
         }]), 0)
       }),
-      (error) => error.kind === 'mcp-isolation' && error.reason === 'not-disabled'
+      (error) => error.kind === 'mcp-isolation' && error.reason === 'configured'
     );
 
     await assert.rejects(
@@ -238,7 +229,7 @@ void (async () => {
           enabled: changedSetCall <= 1
         }]), 0)
       }),
-      (error) => error.kind === 'mcp-isolation' && error.reason === 'configuration-changed'
+      (error) => error.kind === 'mcp-isolation' && error.reason === 'configured'
     );
 
     await assert.rejects(

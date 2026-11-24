@@ -11,12 +11,7 @@ if (process.argv.includes('mcp') && process.argv.includes('list')) {
     process.stderr.write('JSON MCP listing is forbidden in provider tests.\n');
     process.exit(2);
   }
-  const disabled = process.argv.some((argument) =>
-    argument.includes('"fixture_mcp"={enabled=false,command="./.codexvs-disabled-mcp"}'));
-  process.stdout.write(
-    'Name         Command  Args  Env  Cwd  Status    Auth\n'
-    + `fixture_mcp  fixture  -     -    -    ${disabled ? 'disabled' : 'enabled '}  Unsupported\n`
-  );
+  process.stdout.write('No MCP servers configured yet. Try `codex mcp add my-tool -- my-command`.\n');
   process.exit(0);
 }
 
@@ -31,8 +26,7 @@ if (process.env.CODEX_FAKE_STORAGE_PROBE === '1') {
   }) + String.fromCharCode(10));
 }
 
-const processMcpOverrideApplied = process.argv.some((argument) =>
-  argument.includes('"fixture_mcp"={enabled=false,command="./.codexvs-disabled-mcp"}'));
+const processMcpOverrideApplied = process.argv.includes('mcp_servers={}');
 
 const threads = new Map();
 const turns = new Map();
@@ -248,10 +242,8 @@ function rateLimits() {
 }
 
 function startThread(message) {
-  const threadMcp = message.params?.config?.mcp_servers?.fixture_mcp;
-  if (!processMcpOverrideApplied
-    || threadMcp?.enabled !== false
-    || threadMcp?.command !== './.codexvs-disabled-mcp') {
+  const threadMcp = message.params?.config?.mcp_servers;
+  if (!processMcpOverrideApplied || !threadMcp || Object.keys(threadMcp).length !== 0) {
     send({ id: message.id, error: { code: -32602, message: 'Passive MCP isolation was not propagated.' } });
     return;
   }

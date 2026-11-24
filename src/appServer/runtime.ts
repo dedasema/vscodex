@@ -32,6 +32,7 @@ export type RuntimeFailureKind =
   | 'mcp-isolation';
 
 export type McpIsolationFailureReason =
+  | 'configured'
   | 'launch'
   | 'timeout'
   | 'exited'
@@ -312,11 +313,10 @@ export async function validateCodexRuntime(
 }
 
 /**
- * Discover configured MCP server names through the CLI's redacted
- * human-readable table, then prove that command-line overrides disable every
- * effective entry. Never request the JSON form: it can contain raw MCP headers
- * and environment values. Table rows are reduced immediately to name,
- * transport kind, and enabled state and are never logged.
+ * Require an empty MCP configuration before and after the empty override.
+ * Read only the CLI's redacted table; JSON can contain raw MCP headers and
+ * environment values. Parsed rows are never logged. An empty table does not
+ * guarantee that enumeration itself was free of upstream side effects.
  */
 export class EnumeratingMcpIsolationStrategy implements McpIsolationStrategy {
   async prepare(
@@ -353,6 +353,7 @@ async function prepareEnumeratedMcpIsolation(
     [],
     options
   );
+  assertNoConfiguredMcpServers(servers);
   const disableArguments = createMcpDisableArguments(servers);
   const passiveMcpServers = createPassiveMcpServers(servers);
 
@@ -361,7 +362,7 @@ async function prepareEnumeratedMcpIsolation(
     ['-c', MCP_SERVERS_EMPTY_OVERRIDE, ...disableArguments],
     options
   );
-  assertEveryMcpServerDisabled(verifiedServers, servers);
+  assertNoConfiguredMcpServers(verifiedServers);
 
   return { disableArguments, passiveMcpServers };
 }
@@ -554,25 +555,10 @@ async function runMcpList(
   });
 }
 
-function assertEveryMcpServerDisabled(
-  actual: readonly McpServerDescriptor[],
-  expected: readonly McpServerDescriptor[]
-): void {
-  if (actual.length !== expected.length) {
-    throw new CodexMcpIsolationError('configuration-changed');
-  }
-  const expectedByName = new Map(expected.map((server) => [server.name, server.transport]));
-  for (const server of actual) {
-    if (!expectedByName.has(server.name) || expectedByName.get(server.name) !== server.transport) {
-      throw new CodexMcpIsolationError('configuration-changed');
-    }
-    if (server.enabled) {
-      throw new CodexMcpIsolationError('not-disabled');
-    }
-    expectedByName.delete(server.name);
-  }
-  if (expectedByName.size > 0) {
-    throw new CodexMcpIsolationError('configuration-changed');
+function assertNoConfiguredMcpServers(servers: readonly McpServerDescriptor[]): void {
+  if (servers.length > 0) {
+    throw new CodexMcpIsolationError('configured',
+      'CodexVS cannot start while MCP servers are configured in the private CodexVS configuration.');
   }
 }
 

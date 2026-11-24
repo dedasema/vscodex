@@ -22,9 +22,52 @@ void (async () => {
       external: ['cross-spawn']
     });
     const processModule = require(bundlePath);
+    let guardLists = 0;
+    let guardSpawns = 0;
+    const guardManager = new processModule.AppServerProcess({
+      command: 'codex.cmd', extensionVersion: '0.2.1',
+      storageDirectory: join(tempDirectory, 'guard-storage'),
+      validateRuntime: async (command) => ({ command, version: '0.144.4' }),
+      spawn(_command, args) {
+        if (args.includes('mcp')) {
+          guardLists += 1;
+          return createCommandChild(formatMcpList([{ name: 'private-name', transport: 'stdio', enabled: false }]), 0);
+        }
+        guardSpawns += 1;
+        return createFakeAppServer();
+      }
+    });
+    await assert.rejects(guardManager.ensureReady(), (error) =>
+      error.kind === 'mcp-isolation' && error.reason === 'configured' && !error.message.includes('private-name'));
+    assert.equal(guardLists, 1);
+    assert.equal(guardSpawns, 0);
+    guardManager.dispose();
+
+    let secondLists = 0;
+    let secondSpawns = 0;
+    const secondManager = new processModule.AppServerProcess({
+      command: 'codex.cmd', extensionVersion: '0.2.1',
+      storageDirectory: join(tempDirectory, 'second-guard-storage'),
+      validateRuntime: async (command) => ({ command, version: '0.144.4' }),
+      spawn(_command, args) {
+        if (args.includes('mcp')) {
+          secondLists += 1;
+          return createCommandChild(formatMcpList(secondLists === 1 ? [] : [
+            { name: 'private-name', transport: 'stdio', enabled: true }
+          ]), 0);
+        }
+        secondSpawns += 1;
+        return createFakeAppServer();
+      }
+    });
+    await assert.rejects(secondManager.ensureReady(), (error) =>
+      error.kind === 'mcp-isolation' && error.reason === 'configured' && !error.message.includes('private-name'));
+    assert.equal(secondLists, 2);
+    assert.equal(secondSpawns, 0);
+    secondManager.dispose();
+
     const spawned = [];
     const mcpChecks = [];
-    const configuredMcpName = 'configured.server "quoted"';
     const diagnostics = [];
 
     const manager = new processModule.AppServerProcess({
@@ -44,11 +87,7 @@ void (async () => {
       spawn(command, args, options) {
         if (args.includes('mcp') && args.includes('list')) {
           mcpChecks.push({ command, args, options });
-          const child = createCommandChild(formatMcpList([{
-            name: configuredMcpName,
-            transport: 'stdio',
-            enabled: mcpChecks.length === 1
-          }]), 0, mcpChecks.length === 1 ? 150 : 0);
+          const child = createCommandChild(formatMcpList([]), 0, mcpChecks.length === 1 ? 150 : 0);
           return child;
         }
         const child = createFakeAppServer();
@@ -63,20 +102,14 @@ void (async () => {
     assert.equal(manager.generation, 1);
     assert.deepEqual(
       JSON.parse(JSON.stringify(manager.passiveMcpServers)),
-      {
-        [configuredMcpName]: {
-          enabled: false,
-          command: './.codexvs-disabled-mcp'
-        }
-      }
+      {}
     );
     assert.equal(spawned.length, 1);
     assert.equal(mcpChecks.length, 2);
     const expectedCodexHome = join(storageDirectory, 'codex-home');
     assert.deepEqual(mcpChecks[0].args, ['mcp', 'list']);
-    const expectedMcpDisable = `mcp_servers={${JSON.stringify(configuredMcpName)}={enabled=false,command="./.codexvs-disabled-mcp"}}`;
     assert.deepEqual(mcpChecks[1].args, [
-      '-c', 'mcp_servers={}', '-c', expectedMcpDisable, 'mcp', 'list'
+      '-c', 'mcp_servers={}', 'mcp', 'list'
     ]);
     assert.equal(mcpChecks.some((check) => check.args.includes('--json')), false);
     assert.equal(mcpChecks.every((check) => check.options.shell === false), true);
@@ -98,7 +131,7 @@ void (async () => {
     );
     assert.deepEqual(
       spawned[0].args,
-      processModule.buildAppServerArguments(['-c', expectedMcpDisable])
+      processModule.buildAppServerArguments([])
     );
     assert(
       spawned[0].args.indexOf('-c') < spawned[0].args.indexOf('app-server'),
@@ -217,9 +250,9 @@ void (async () => {
     });
     await assert.rejects(
       unsafeManager.ensureReady(),
-      (error) => error.kind === 'mcp-isolation' && error.reason === 'not-disabled'
+      (error) => error.kind === 'mcp-isolation' && error.reason === 'configured'
     );
-    assert.equal(unsafeMcpChecks, 2);
+    assert.equal(unsafeMcpChecks, 1);
     assert.equal(unsafeAppServerSpawned, false, 'unsafe MCP verification must prevent app-server launch');
     assert.equal(unsafeManager.state, 'idle');
     unsafeManager.dispose();

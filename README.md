@@ -89,15 +89,9 @@ The dashboard shows only returned quota windows, remaining percentages, reset ti
 
 ## MCP and tools
 
-Codex CLI clients share MCP configuration. CodexVS does not modify that global configuration and does not make those servers available to Copilot. Before starting its passive app-server child it:
+Before starting its passive app-server child, CodexVS requires two redacted plain-text MCP listings from its private CodexVS home to be empty, including disabled entries. The second uses an empty override; threads receive an empty map. CodexVS does not modify global configuration or request credential-bearing JSON.
 
-1. Reads only the redacted plain-text `codex mcp list` output.
-2. Retains bounded server names, transport types, and enabled status.
-3. Creates exact process-local `enabled=false` overrides with harmless replacement transports.
-4. lists again and proves the same server set is disabled.
-5. passes the verified disabled map into every thread.
-
-Each listing has an independent 30-second timeout. App-server startup retains its separate 10-second timeout. A timeout, malformed listing, changing server set, or failure to disable is reported distinctly. Valid global MCP servers do not need to be removed.
+Each listing has a 30-second timeout. This guard prevents app-server launch after a nonempty listing; it cannot guarantee that the initial enumeration or other upstream startup performs no launcher activity.
 
 Caller-supplied VS Code tools are different: CodexVS reports a dynamic tool call to VS Code, the caller executes it under VS Code permissions, and the result is returned on a later provider invocation. Every Codex-owned command, filesystem, MCP, web, browser, computer, image, plugin, hook, skill, memory, goal, or subagent path is disabled and rejected.
 

@@ -47,7 +47,7 @@ Lifecycle and request diagnostics are structural. App-server stderr is consumed 
 
 ## MCP isolation
 
-CodexVS enumerates MCP configuration from its private Codex home, not the normal home shared by other Codex clients. A process-local isolation strategy enumerates the redacted plain-text list, builds exact quoted-key disabled overrides, proves the same set is disabled, and supplies the same map at thread creation. The strategy never writes global configuration or requests credential-bearing JSON output.
+CodexVS requires two redacted plain-text MCP listings from its private Codex home to be empty, regardless of entry status, before launching app-server. The second listing uses an empty override and threads receive an empty map. The guard does not guarantee that initial enumeration or other upstream startup performs no launcher activity. It never writes global configuration or requests credential-bearing JSON output.
 
 Enumeration is behind `McpIsolationStrategy`; a future documented app-server-wide disable mechanism can replace it without changing process or thread code.
 
