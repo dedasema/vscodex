@@ -206,7 +206,7 @@ try {
   responseBackend.runChat = async () => { calls.push('legacy'); return { kind: 'completed' }; };
   const usageModels = [];
   const multi = new CodexVSProvider(output, responseBackend, {
-    setSelectedModel: (id) => usageModels.push(id)
+    observeRequestedModel: (backend, label, id) => usageModels.push([backend, label, id])
   }, undefined, {
     list: () => [{ id: 'work', label: 'Work' }],
     get: (id) => id === 'work' ? work : undefined
@@ -216,9 +216,9 @@ try {
   assert.equal(named.name, 'GPT Ultra · Work');
   const send = (model) => multi.provideLanguageModelChatResponse(model, [], {}, { report() {} }, token);
   await send(named);
-  assert.deepEqual(usageModels, []);
+  assert.deepEqual(usageModels, [[work, 'Work', 'gpt-5.5']]);
   await send(legacy);
-  assert.deepEqual(usageModels, ['gpt-5.5']);
+  assert.deepEqual(usageModels.at(-1), [responseBackend, 'Default account', 'gpt-5.5']);
   failWork = true;
   await assert.rejects(send(named));
   await assert.rejects(send({ ...named, id: 'codex-account::unknown::gpt-ultra-entry' }));
@@ -229,6 +229,18 @@ try {
   assert.deepEqual(await multi.provideLanguageModelChatInformation({ silent: false }, token), [named]);
   await send(named);
   assert.deepEqual(calls, ['work', 'legacy', 'work', 'work']);
+  const workModels = await work.listModels();
+  let resolveOlder;
+  work.listModels = () => new Promise((resolve) => { resolveOlder = resolve; });
+  responseBackend.listModels = async () => workModels;
+  const older = send(named);
+  await send(legacy);
+  const afterNewer = usageModels.length;
+  assert.deepEqual(usageModels.at(-1), [responseBackend, 'Default account', 'gpt-5.5']);
+  resolveOlder(workModels);
+  await older;
+  assert.equal(usageModels.length, afterNewer, 'An older request cannot retake the limits display.');
+  assert.deepEqual(calls.slice(-2), ['legacy', 'work'], 'Both chats retain their own routing.');
   multi.dispose();
 
   const selected = {

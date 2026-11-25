@@ -154,9 +154,45 @@ try {
       }
     }
   }
+  await checkRequestedAccount();
   console.log('Account usage dashboard integration tests passed.');
 } finally {
   status.dispose();
+}
+
+async function checkRequestedAccount() {
+  const namedRates = eventSource();
+  let reads = 0;
+  const named = {
+    onDidUpdateRateLimits: namedRates.event,
+    readRateLimits: async () => { reads += 1; return snapshot('Named plan'); }
+  };
+  const view = new CodexAccountUsageStatusBar({ warn() {} }, source,
+    async () => ({ target: named, label: 'Work' }));
+  try {
+    const opened = view.showDetails();
+    const panel = panels.at(-1);
+    panel.receive({ type: 'ready' });
+    view.observeRequestedModel(named, 'Work', 'model-b');
+    assert.equal(item.visible, false);
+    await tick();
+    assert.match(item.tooltip, /Work.*Last requested account/);
+    assert.match(html(panel), /Last requested account/);
+    pending.at(-1).resolve(snapshot('Late default plan'));
+    await opened;
+    assert.doesNotMatch(html(panel), /Late default plan/);
+    view.observeRequestedModel(named, 'Work', 'model-b');
+    assert.equal(reads, 1);
+    panel.receive({ type: 'selectAccount' });
+    await tick();
+    assert.match(html(panel), /Manually selected/);
+    view.observeRequestedModel(source, 'Default account', 'model-b');
+    namedRates.fire(snapshot('Late named plan'));
+    assert.doesNotMatch(html(panel), /Named plan|Late named plan/);
+    pending.at(-1).resolve(snapshot('New default plan'));
+    await tick();
+    assert.match(item.tooltip, /Default account.*Last requested account/);
+  } finally { view.dispose(); }
 }
 
 async function checkAccountRefreshRace({ oldRejects, currentFirst, currentFails }) {

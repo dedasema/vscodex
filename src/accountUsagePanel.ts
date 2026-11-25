@@ -33,10 +33,12 @@ export class CodexAccountUsagePanel implements vscode.Disposable {
     this.publishState();
   }
 
-  setAccount(label: string): void {
+  setAccount(label: string, sourceChanged = true): void {
     this.accountLabel = label;
-    this.refreshGeneration += 1;
-    this.refreshInFlight = false;
+    if (sourceChanged) {
+      this.refreshGeneration += 1;
+      this.refreshInFlight = false;
+    }
   }
 
   show(): void {

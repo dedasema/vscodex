@@ -85,7 +85,7 @@ Each account has its own private Codex home, login, and backend. A limit or sign
 
 Open **Codex: Show Account Limits** from the Command Palette or click the Codex account-limits status item. The command opens or reuses a themed dashboard beside the editor and refreshes its data; use **Refresh** inside the dashboard to request another update.
 
-The dashboard shows only returned quota windows, remaining percentages, reset times, and known plan/credit information—not token balances inferred from percentages. Loading, empty, older-data, and refresh-failure states distinguish unavailable data from current limits. Cached limits may remain visible after a refresh failure; account changes clear them immediately. Use **Change account** in the dashboard to choose the account shown there and in the status bar. This does not change any chat’s account. The status item is hidden when no limits are available.
+The dashboard shows only returned quota windows, remaining percentages, reset times, and known plan/credit information—not token balances inferred from percentages. Loading, empty, older-data, and refresh-failure states distinguish unavailable data from current limits. Cached limits may remain visible after a refresh failure; account changes clear them immediately. The dashboard and status bar follow the account of the most recent request CodexVS accepts, not the model picker or the active chat. Use **Change account** to inspect another account until the next request. This does not change any chat’s account. The status item is hidden when no limits are available.
 
 ## MCP and tools
 

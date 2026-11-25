@@ -61,7 +61,7 @@ export interface ResolvedReasoningRequest {
 }
 
 export interface SelectedModelSink {
-  setSelectedModel(model: string): void;
+  observeRequestedModel(backend: CodexBackend, accountLabel: string, model: string): void;
 }
 
 export interface ProviderIntegrationAdvisor {
@@ -78,6 +78,8 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
   private readonly modelInfoChangedEmitter = new vscode.EventEmitter<void>();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly observedNamedBackends = new Set<CodexBackend>();
+  private requestSequence = 0;
+  private lastObservedRequest = 0;
 
   constructor(
     private readonly outputChannel: vscode.LogOutputChannel,
@@ -165,6 +167,7 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
     token: vscode.CancellationToken
   ): Promise<void> {
     const startedAt = Date.now();
+    const requestSequence = ++this.requestSequence;
     let backend = this.backend;
     try {
       const config = getProviderConfig();
@@ -192,7 +195,12 @@ export class CodexVSProvider implements vscode.LanguageModelChatProvider {
       if (!selected) {
         throw vscode.LanguageModelError.NotFound('The selected Codex model is no longer available.');
       }
-      if (!accountProfile) this.selectedModelSink?.setSelectedModel(selected.requestModel);
+      if (!token.isCancellationRequested && requestSequence > this.lastObservedRequest) {
+        this.lastObservedRequest = requestSequence;
+        this.selectedModelSink?.observeRequestedModel(
+          backend, accountProfile?.label ?? 'Default account', selected.requestModel
+        );
+      }
       this.integrationAdvisor?.onModelSelected();
 
       const reasoning = resolveReasoningRequest(

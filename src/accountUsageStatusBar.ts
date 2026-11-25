@@ -35,6 +35,8 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
   private usageSource: AccountUsageSource;
   private sourceSubscriptions: vscode.Disposable[] = [];
   private accountLabel?: string;
+  private accountSelection?: 'Last requested account' | 'Manually selected';
+  private requestedUsageModel?: string;
   private sourceGeneration = 0;
 
   constructor(
@@ -89,16 +91,36 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
 
   async setUsageSource(source: AccountUsageSource, label: string): Promise<void> {
     if (this.disposed) return;
-    if (source !== this.usageSource) {
+    this.requestedUsageModel = undefined;
+    this.updateUsageSource(source, label, 'Manually selected');
+    await this.refresh().catch(() => {});
+  }
+
+  observeRequestedModel(source: AccountUsageSource, label: string, model: string): void {
+    if (this.disposed) return;
+    if (source === this.defaultSource) this.selectedModel = model;
+    this.requestedUsageModel = model;
+    if (this.updateUsageSource(source, label, 'Last requested account')) {
+      void this.refresh().catch(() => {});
+    }
+  }
+
+  private updateUsageSource(source: AccountUsageSource, label: string,
+    selection: NonNullable<CodexAccountUsageStatusBar['accountSelection']>): boolean {
+    const changed = source !== this.usageSource;
+    this.accountLabel = label;
+    this.accountSelection = selection;
+    this.dashboard.setAccount(`${label} · ${selection}`, changed);
+    if (changed) {
       this.sourceSubscriptions.splice(0).forEach((subscription) => subscription.dispose());
       this.sourceGeneration += 1;
       this.usageSource = source;
-      this.accountLabel = label;
-      this.dashboard.setAccount(label);
       this.clear();
       this.subscribeToSource();
+    } else {
+      this.render();
     }
-    await this.refresh().catch(() => {});
+    return changed;
   }
 
   private subscribeToSource(): void {
@@ -206,7 +228,8 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
     if (this.disposed) {
       return;
     }
-    const model = this.usageSource === this.defaultSource ? this.selectedModel : getProviderConfig().model;
+    const model = this.usageSource === this.defaultSource
+      ? this.selectedModel : this.requestedUsageModel ?? getProviderConfig().model;
     const view = buildCodexAccountUsageViewModel(
       this.lastSnapshot ?? { fetchedAt: Number.NaN, limits: [] }, model, new Date()
     );
@@ -221,7 +244,9 @@ export class CodexAccountUsageStatusBar implements vscode.Disposable {
       return;
     }
     this.statusBarItem.text = this.accountLabel ? `${this.accountLabel.replaceAll('$(', '$ (')} · ${display.compactText}` : display.compactText;
-    this.statusBarItem.tooltip = this.accountLabel ? `Account: ${this.accountLabel} · ${display.tooltip}` : display.tooltip;
+    this.statusBarItem.tooltip = this.accountLabel
+      ? [`Account: ${this.accountLabel}`, this.accountSelection, display.tooltip].filter(Boolean).join(' · ')
+      : display.tooltip;
     this.statusBarItem.show();
   }
 }
